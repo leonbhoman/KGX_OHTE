@@ -1177,10 +1177,10 @@
     <polyline points="63.12 852.42 63.12 922.62 54.24 930.06" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
     <polyline points="61.14 853.38 61.14 921.72 52.98 928.56" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
     <polyline points="62.1 852.9 62.1 922.14 53.64 929.28" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
-    <polyline points="29.1 966.78 29.1 871.92 27.12 870.96 27.12 967.74" fill="#838383" fill-rule="evenodd"/>
-    <polyline points="27.12 967.74 27.12 870.96 36 863.52" fill="none" stroke="#838383" stroke-linejoin="bevel" stroke-width=".72"/>
-    <polyline points="29.1 966.78 29.1 871.92 37.26 865.08" fill="none" stroke="#838383" stroke-linejoin="bevel" stroke-width=".72"/>
-    <polyline points="28.14 967.26 28.14 871.44 36.6 864.3" fill="none" stroke="#838383" stroke-linejoin="bevel" stroke-width=".72"/>
+    <polyline points="29.1 966.78 29.1 871.92 27.12 870.96 27.12 967.74" fill="blue" fill-rule="evenodd"/>
+    <polyline points="27.12 967.74 27.12 870.96 36 863.52" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
+    <polyline points="29.1 966.78 29.1 871.92 37.26 865.08" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
+    <polyline points="28.14 967.26 28.14 871.44 36.6 864.3" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
     <polyline points="36 873.6 46.14 882.12 46.14 879.54 37.26 872.1" fill="blue" fill-rule="evenodd"/>
     <polyline points="36 873.6 37.26 872.1 46.14 879.54" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
     <line x1="36" y1="873.6" x2="44.16" y2="880.44" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
@@ -1193,10 +1193,10 @@
     <line x1="60.72" y1="820.02" x2="54.66" y2="825.12" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
     <line x1="59.7" y1="822.18" x2="54.24" y2="826.74" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
     <line x1="59.7" y1="819.54" x2="52.98" y2="825.24" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
-    <polyline points="35.64 972.24 29.1 966.78 27.12 967.74 35.64 974.88" fill="#838383" fill-rule="evenodd"/>
-    <line x1="34.62" y1="974.04" x2="27.12" y2="967.74" fill="none" stroke="#838383" stroke-linejoin="bevel" stroke-width=".72"/>
-    <line x1="34.62" y1="971.4" x2="29.1" y2="966.78" fill="none" stroke="#838383" stroke-linejoin="bevel" stroke-width=".72"/>
-    <line x1="35.64" y1="973.56" x2="28.14" y2="967.26" fill="none" stroke="#838383" stroke-linejoin="bevel" stroke-width=".72"/>
+    <polyline points="35.64 972.24 29.1 966.78 27.12 967.74 35.64 974.88" fill="blue" fill-rule="evenodd"/>
+    <line x1="34.62" y1="974.04" x2="27.12" y2="967.74" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
+    <line x1="34.62" y1="971.4" x2="29.1" y2="966.78" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
+    <line x1="35.64" y1="973.56" x2="28.14" y2="967.26" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
     <polyline points="37.62 973.92 37.62 855 35.64 854.1 35.64 974.88" fill="blue" fill-rule="evenodd"/>
     <polyline points="35.64 972.24 35.64 854.1 52.62 839.82" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
     <polyline points="37.62 973.92 37.62 855 52.62 842.4" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
@@ -1258,8 +1258,8 @@
     <line x1="89.04" y1="1017.06" x2="37.62" y2="973.92" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
     <polyline points="89.04 972.42 89.04 975.48 91.02 975.48 91.02 973.32" fill="blue" fill-rule="evenodd"/>
     <line x1="89.04" y1="975.48" x2="91.02" y2="975.48" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
-    <polyline points="29.1 871.92 37.26 865.08 36 863.52 27.12 870.96" fill="#838383" fill-rule="evenodd"/>
-    <line x1="37.26" y1="865.08" x2="36" y2="863.52" fill="none" stroke="#838383" stroke-linejoin="bevel" stroke-width=".72"/>
+    <polyline points="29.1 871.92 37.26 865.08 36 863.52 27.12 870.96" fill="blue" fill-rule="evenodd"/>
+    <line x1="37.26" y1="865.08" x2="36" y2="863.52" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
     <line x1="54.24" y1="810.96" x2="52.98" y2="812.46" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
     <line x1="52.98" y1="825.24" x2="54.24" y2="826.74" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>
     <line x1="36" y1="965.04" x2="40.5" y2="961.26" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width=".72"/>

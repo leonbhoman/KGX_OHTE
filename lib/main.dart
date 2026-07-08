@@ -83,13 +83,14 @@ class _YardMapScreenState extends State<YardMapScreen> {
         clipBehavior: Clip.none,
         children: [
           // Layer 1: The wide blueprint asset frame
-          SvgPicture.asset(
-            'assets/kgx_yard_map.svg',
-            width: 1605.08,
-            height: 1111.32,
-            fit: BoxFit.none, // Maps the vector paths exactly 1:1 onto your layout coordinates
-            alignment: Alignment.topLeft,
-          ),
+          // Layer 1: The dynamic vector blueprint frame
+        SvgPicture.string(
+          _controller.buildDynamicSvgCode(), // Pulls the raw manipulated XML text directly from memory
+          width: 1605.08,
+          height: 1111.32,
+          fit: BoxFit.none,
+          alignment: Alignment.topLeft,
+        ),
           
           // Layer 2: Clickable Switch Matrix overlays
           ..._buildSwitchOverlayNodes(),

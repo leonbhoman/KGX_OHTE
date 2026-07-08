@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 
+String rawSvgTemplate = '';
+
 class YardController {
   // Keeps track of which track groups are energized (true) or isolated (false)
   final Map<String, bool> trackStates = {};
@@ -11,12 +13,16 @@ Map<String, List<double>> switchCoordinates = {
   };
 
   // 1. Load the JSON data from your asset folder
-  Future<void> initializeYardData() async {
+Future<void> initializeYardData() async {
     try {
       final String jsonString = await rootBundle.loadString('assets/kgx_switch-coords.json');
-      switchCoordinates = jsonDecode(jsonString);
+      switchCoordinates = Map<String, List<double>>.from(jsonDecode(jsonString).map(
+        (key, value) => MapEntry(key, List<double>.from(value))
+      ));
       
-      // Initialize all track paths to a default state (e.g., true = energized)
+      // Load the raw asset text template once on startup
+      rawSvgTemplate = await rootBundle.loadString('assets/kgx_yard_map.svg');
+      
       initializeTrackDefaultStates();
     } catch (e) {
       print("Error loading switch coordinates: $e");
@@ -61,4 +67,41 @@ Map<String, List<double>> switchCoordinates = {
       
     print("Switch $switchName flipped! New track states updated.");
   }
+
+  /// Patch: Modifies only the stroke colors belonging to non-energized track groups
+  String buildDynamicSvgCode() {
+    if (rawSvgTemplate.isEmpty) return '';
+
+    String workingCopy = rawSvgTemplate;
+
+    trackStates.forEach((groupId, isEnergized) {
+      if (!isEnergized) {
+        // Find where this specific track group block starts
+        final String searchString = '<g id="$groupId">';
+        int groupStartIndex = workingCopy.indexOf(searchString);
+        
+        if (groupStartIndex != -1) {
+          // Find where this group block ends
+          int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
+          
+          if (groupEndIndex != -1) {
+            // Extract just the inner path content for this track segment
+            String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
+            
+            // Target the stroke properties inside this group only
+            // Swap 'stroke="blue"' with a de-energized gray 'stroke="#444444"'
+            groupContent = groupContent.replaceAll('stroke="blue"', 'stroke="#444444"');
+            groupContent = groupContent.replaceAll('fill="blue"', 'fill="#444444"'); // For track arrows/polylines
+            
+            // Re-stitch the modified group text back into the master string layout
+            workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
+          }
+        }
+      }
+    });
+
+    return workingCopy;
+  }
+
+
 }

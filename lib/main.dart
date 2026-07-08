@@ -116,13 +116,13 @@ class _YardMapScreenState extends State<YardMapScreen> {
 
       nodes.add(
         Positioned(
-          left: x - 12, // Automatically snaps onto the exact vector point line width
-          top: y - 12,  // Automatically snaps onto the exact vector point line height
+          left: x - 18, // Automatically snaps onto the exact vector point line width
+          top: y - 18,  // Automatically snaps onto the exact vector point line height
           child: MouseRegion(
             cursor: SystemMouseCursors.click,// Changes cursor to hand on desktop pointer hover
             child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
+            behavior: HitTestBehavior.opaque, // Ensures the entire 36x36 area captures clicks              
+            onTap: () {
                 setState(() {
                   _controller.toggleSwitch(switchName);
                 });
@@ -130,8 +130,8 @@ class _YardMapScreenState extends State<YardMapScreen> {
               child: Tooltip(
                 message: 'Switch $switchName',
                 child: Container(
-                  width: 24,
-                  height: 24,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: Colors.yellow.withOpacity(0.3),
                     shape: BoxShape.circle,

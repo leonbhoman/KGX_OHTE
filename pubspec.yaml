@@ -1,0 +1,26 @@
+name: kgx_ohte
+description: "An interactive OHTE and railway line map of Kingsrest marshalling yard. For use by yardplanners or yardmasters to visualize occupations"
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_svg: ^2.0.10
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/kgx_switch-coords.json
+    - assets/kgx_yard_map.svg

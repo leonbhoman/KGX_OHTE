@@ -62,7 +62,7 @@ Future<void> initializeYardData() async {
     // Example rule logic: Flipping a specific switch isolates a specific track
     if (switchName == 'C32') {
       // Toggle the state of the associated line track group
-      trackStates['SeasideOutFeed'] = !trackStates['53_to_59']!;
+      trackStates['53_to_59'] = !trackStates['53_to_59']!;
     }
       
     print("Switch $switchName flipped! New track states updated.");

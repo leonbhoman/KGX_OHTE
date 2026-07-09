@@ -57,8 +57,8 @@ class _YardMapScreenState extends State<YardMapScreen> {
 
           return SizedBox.expand(
             child: InteractiveViewer(
-              minScale: 0.1,
-              maxScale: 4.0,
+              minScale: 0.2,
+              maxScale: 5.0,
               constrained: false, // Keeps your map reading horizontally layout-wide
               boundaryMargin: const EdgeInsets.all(500),
               child: Padding(

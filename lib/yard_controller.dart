@@ -65,9 +65,9 @@ Future<void> initializeYardData() async {
     'C20' : '_16_to_23',
     'C21' : '_8_to_15',
     'C22' : '_1_to_7',
-    'C24' : 'LandsideInFeeder2',
+    'C25' : 'LandsideInFeeder2',
     'T31' : 'LandsideInFeeder1',
-    'C25' : 'SeasideInFeeder2',
+    'C24' : 'SeasideInFeeder2',
     'C23' : 'SeasideInFeeder1',
     'C10' : 'SeasideOutFeed',
     'C15' : 'LandsideOutFeed'

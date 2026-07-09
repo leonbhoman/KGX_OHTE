@@ -54,18 +54,18 @@ class YardController {
 
   // 3. Maps each clickable switch name directly to its corresponding SVG track group
   final Map<String, String> _switchMap = {
-    'C32' : '53_to_59',
-    'C16' : '46_to_52',
-    'C17' : '40_to_45',
-    'C18' : '32_to_39',
-    'C19' : '24_to_31',
-    'C20' : '16_to_23',
-    'C21' : '8_to_15',
-    'C22' : '1_to_7',
+    'C32' : 'C32R53to59',
+    'C16' : 'C16R46to52',
+    'C17' : 'C17R40to45',
+    'C18' : 'C18R32to39',
+    'C19' : 'C19R24to31',
+    'C20' : 'C20R16to23',
+    'C21' : 'C21R8to15',
+    'C22' : 'C22R1to7',
     'C25' : 'LandsideInFeeder2', // right
-    'T31' : 'SeasideInFeeder1',
+    'T31' : 'SeasideInFeeder1', // right
     'C24' : 'SeasideInFeeder2', // right
-    'C23' : 'LandsideInFeeder1',
+    'C23' : 'LandsideInFeeder1', // right
     'C10' : 'SeasideOutFeed', // right
     'C15' : 'LandsideOutFeed' // right
   };

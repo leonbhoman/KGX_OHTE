@@ -88,31 +88,28 @@ Future<void> initializeYardData() async {
   }
 
   /// Patch: Modifies only the stroke colors belonging to non-energized track groups
+/// Patch: Modifies only the stroke colors belonging to non-energized track groups
   String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) return '';
 
     String workingCopy = rawSvgTemplate;
 
     trackStates.forEach((groupId, isEnergized) {
+      // We only target and alter the string if the group is explicitly isolated (false)
       if (!isEnergized) {
-        // Find where this specific track group block starts
         final String searchString = '<g id="$groupId">';
         int groupStartIndex = workingCopy.indexOf(searchString);
         
         if (groupStartIndex != -1) {
-          // Find where this group block ends
           int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
           
           if (groupEndIndex != -1) {
-            // Extract just the inner path content for this track segment
             String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
             
-            // Target the stroke properties inside this group only
-            // Swap 'stroke="blue"' with a de-energized gray 'stroke="#444444"'
+            // Swap out the active colors for de-energized gray
             groupContent = groupContent.replaceAll('stroke="blue"', 'stroke="#444444"');
-            groupContent = groupContent.replaceAll('fill="blue"', 'fill="#444444"'); // For track arrows/polylines
+            groupContent = groupContent.replaceAll('fill="blue"', 'fill="#444444"'); 
             
-            // Re-stitch the modified group text back into the master string layout
             workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
           }
         }
@@ -121,6 +118,5 @@ Future<void> initializeYardData() async {
 
     return workingCopy;
   }
-
 
 }

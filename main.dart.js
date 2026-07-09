@@ -60775,11 +60775,11 @@ $0(){var s=this.a
 s.aT(new A.a9R(s,this.b))},
 $S:0}
 A.a9R.prototype={
-$0(){var s,r,q=this.b
-if(q==="C32"){s=this.a.d.a
-r=s.j(0,"53_to_59")
+$0(){var s,r,q="53_to_59",p=this.b
+if(p==="C32"){s=this.a.d.a
+r=s.j(0,q)
 r.toString
-s.m(0,"SeasideOutFeed",!r)}A.abn("Switch "+q+" flipped! New track states updated.")},
+s.m(0,q,!r)}A.abn("Switch "+p+" flipped! New track states updated.")},
 $S:0}
 A.a4f.prototype={
 oS(){var s=0,r=A.T(t.H),q=1,p=[],o=this,n,m,l,k,j,i

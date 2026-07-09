@@ -37,14 +37,14 @@ class YardController {
       'SeasideInFeeder1',
       'SeasideInFeeder2',
       'LandsideOutFeed',
-      '_53_to_59',
-      '_46_to_52',
-      '_40_to_45',
-      '_32_to_39',
-      '_24_to_31',
-      '_16_to_23',
-      '_8_to_15',
-      '_1_to_7'
+      'C32R53to59',
+      'C16R46to52',
+      'C17R40to45',
+      'C18R32to39',
+      'C19R24to31',
+      'C20R16to23',
+      'C21R8to15',
+      'C22R1to7'
     ];
 
     for (var groupId in trackGroups) {

@@ -38,7 +38,6 @@ Future<void> initializeYardData() async {
       'LandsideInFeeder2',
       'SeasideInFeeder1',
       'SeasideInFeeder2',
-      'SeasideOutFeed',
       'LandsideOutFeed',
       '53_to_59',
       '46_to_52',
@@ -48,8 +47,6 @@ Future<void> initializeYardData() async {
       '16_to_23',
       '8_to_15',
       '1_to_7'
-      
-      ''
     ];
 
     for (var groupId in trackGroups) {

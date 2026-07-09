@@ -58,14 +58,36 @@ Future<void> initializeYardData() async {
   }
 
   // 3. Logic to toggle states when a switch is flipped
+  // Maps each clickable switch name directly to its corresponding SVG track group
+  final Map<String, String> _switchMap = {
+    'C32': '53_to_59',
+    'C16' : '46_to_52',
+    'C17' : '40_to_45',
+    'C18' : '32_to_39',
+    'C19' : '24_to_31',
+    'C20' : '16_to_23',
+    'C21' : '8_to_15',
+    'C22' : '1_to_7',
+    'C24' : 'LandsideInFeeder2',
+    'T31' : 'LandsideInFeeder1',
+    'C25' : 'SeasideInFeeder2',
+    'C23' : 'SeasideInFeeder1',
+    'C10' : 'SeasideOutFeed',
+    'C15' : 'LandsideOutFeed'
+    // You can easily add more pairs here as you map them out!
+  };
+
+  // 3. Logic to toggle states when a switch is flipped
   void toggleSwitch(String switchName) {
-    // Example rule logic: Flipping a specific switch isolates a specific track
-    if (switchName == 'C32') {
-      // Toggle the state of the associated line track group
-      trackStates['53_to_59'] = !trackStates['53_to_59']!;
+    // Get the track group linked to this switch from our map
+    final String? targetGroup = _switchMap[switchName];
+
+    if (targetGroup != null && trackStates.containsKey(targetGroup)) {
+      trackStates[targetGroup] = !trackStates[targetGroup]!;
+      print("Switch $switchName flipped! Toggled track group: $targetGroup");
+    } else {
+      print("Switch $switchName flipped, but no track group is assigned to it yet.");
     }
-      
-    print("Switch $switchName flipped! New track states updated.");
   }
 
   /// Patch: Modifies only the stroke colors belonging to non-energized track groups

@@ -84,6 +84,7 @@ class YardController {
   }
 
   /// Patch: Modifies track colors belonging to non-energized track groups
+/// Patch: Modifies track colors belonging to non-energized track groups
   String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) return '';
 
@@ -103,13 +104,21 @@ class YardController {
             // Extract just the inner path content for this track segment
             String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
             
-            // Catch hardcoded blue attributes OR Illustrator style classes (st1, st2, st3, st4, etc.)
-            groupContent = groupContent.replaceAll('stroke="blue"', 'stroke="#444444"');
-            groupContent = groupContent.replaceAll('fill="blue"', 'fill="#444444"');
-            groupContent = groupContent.replaceAll('class="st1"', 'class="st1" stroke="#444444" fill="#444444"');
-            groupContent = groupContent.replaceAll('class="st2"', 'class="st2" stroke="#444444"');
-            groupContent = groupContent.replaceAll('class="st3"', 'class="st3" stroke="#444444" fill="#444444"');
-            groupContent = groupContent.replaceAll('class="st4"', 'class="st4" stroke="#444444"');
+            // 1. Wildcard match: Convert ANY existing inline stroke color to gray
+            groupContent = groupContent.replaceAll(RegExp(r'stroke="[^"]*"'), 'stroke="#444444"');
+            
+            // 2. Wildcard match: Convert ANY inline fill color to gray (but preserve transparency)
+            groupContent = groupContent.replaceAllMapped(RegExp(r'fill="([^"]*)"'), (match) {
+              final String fillValue = match.group(1) ?? '';
+              return fillValue == 'none' ? 'fill="none"' : 'fill="#444444"';
+            });
+            
+            // 3. Catch paths relying on CSS classes by forcing an inline gray stroke override
+            // SVG rules dictate that inline attributes always override stylesheet classes.
+            groupContent = groupContent.replaceAllMapped(RegExp(r'class="([^"]*)"'), (match) {
+              final String classAttr = match.group(0) ?? '';
+              return '$classAttr stroke="#444444"';
+            });
             
             // Re-stitch the modified group text back into the master string layout
             workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
@@ -119,5 +128,4 @@ class YardController {
     });
 
     return workingCopy;
-  }
-}
+  }}

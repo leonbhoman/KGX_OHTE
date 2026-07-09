@@ -62,12 +62,12 @@ class YardController {
     'C20' : '_16_to_23',
     'C21' : '_8_to_15',
     'C22' : '_1_to_7',
-    'C25' : 'LandsideInFeeder2',
-    'T31' : 'LandsideInFeeder1',
-    'C24' : 'SeasideInFeeder2',
-    'C23' : 'SeasideInFeeder1',
-    'C10' : 'SeasideOutFeed',
-    'C15' : 'LandsideOutFeed'
+    'C25' : 'LandsideInFeeder2', // right
+    'T31' : 'SeasideInFeeder1',
+    'C24' : 'SeasideInFeeder2', // right
+    'C23' : 'LandsideInFeeder1',
+    'C10' : 'SeasideOutFeed', // right
+    'C15' : 'LandsideOutFeed' // right
   };
 
   // 4. Logic to toggle states when a switch is flipped

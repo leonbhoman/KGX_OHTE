@@ -525,7 +525,7 @@
     <polyline points="236.22 450.92 232.68 450.92 231.24 452.31 236.22 452.3" fill="#cc65ff" fill-rule="evenodd"/>
     <line x1="232.58" y1="407.66" x2="231.14" y2="407.67" fill="none" stroke="#cc65ff" stroke-linejoin="bevel" stroke-width="1.02"/>
   </g>
-  <g id="C22R1to7" data-name="1 to 7">
+  <g id="C22R1to7" data-name="C22R1to7">
     <polyline points="605.9 633.45 662.36 633.31 661.45 631.33 606.85 631.46" fill="red" fill-rule="evenodd"/>
     <polyline points="584.12 607.64 585.67 606.38 606.85 631.46 661.45 631.33 682.51 606.14" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>
     <polyline points="584.12 607.64 605.9 633.45 662.36 633.31 684.02 607.4" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>

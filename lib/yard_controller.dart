@@ -87,6 +87,8 @@ class YardController {
 /// Patch: Modifies track colors belonging to non-energized track groups
   /// Patch: Modifies track colors belonging to non-energized track groups
 /// Patch: Modifies track colors belonging to non-energized track groups
+/// Patch: Modifies track colors belonging to non-energized track groups
+/// Patch: Replaces raw color values with gray within de-energized layers
   String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) return '';
 
@@ -94,48 +96,40 @@ class YardController {
 
     trackStates.forEach((groupId, isEnergized) {
       if (!isEnergized) {
-        // Match <g id="groupId" ignoring case, variations in spaces, single/double quotes, or trailing attributes
-        final RegExp groupRegex = RegExp(
-          '<g[^>]*id=["\']' + RegExp.escape(groupId) + '["\'][^>]*>', 
-          caseSensitive: false
-        );
+        // Find where this specific yard section block starts
+        final String searchString = '<g id="$groupId">';
+        int groupStartIndex = workingCopy.indexOf(searchString);
         
-        final Match? match = groupRegex.firstMatch(workingCopy);
-        
-        if (match != null) {
-          int groupStartIndex = match.start;
-          
-          // Find where this group block ends
+        if (groupStartIndex != -1) {
           int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
           
           if (groupEndIndex != -1) {
-            // Extract just the inner path content for this track segment
+            // Isolate only the contents of this specific track group
             String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
             
-            // 1. Wildcard match: Convert ANY existing inline stroke color to gray
+            // 1. Swap every version of red properties (both fills and strokes)
+            groupContent = groupContent.replaceAll('="red"', '="#444444"');
+            groupContent = groupContent.replaceAll('=red', '="#444444"');
+            groupContent = groupContent.replaceAll('="red "', '="#444444"');
+
+            // 2. Swap every version of blue properties (both fills and strokes)
+            groupContent = groupContent.replaceAll('="blue"', '="#444444"');
+            groupContent = groupContent.replaceAll('=blue', '="#444444"');
+            groupContent = groupContent.replaceAll('="blue "', '="#444444"');
+
+            // 3. Keep the feeder support working safely by swapping hex codes
             groupContent = groupContent.replaceAll(RegExp(r'stroke="[^"]*"'), 'stroke="#444444"');
-            
-            // 2. Wildcard match: Convert ANY inline fill color to gray (but preserve transparency)
-            groupContent = groupContent.replaceAllMapped(RegExp(r'fill="([^"]*)"'), (m) {
-              final String fillValue = m.group(1) ?? '';
+            groupContent = groupContent.replaceAllMapped(RegExp(r'fill="([^"]*)"'), (match) {
+              final String fillValue = match.group(1) ?? '';
               return fillValue == 'none' ? 'fill="none"' : 'fill="#444444"';
             });
             
-            // 3. Catch paths relying on CSS classes by forcing an inline gray stroke override
-            groupContent = groupContent.replaceAllMapped(RegExp(r'class="([^"]*)"'), (m) {
-              final String classAttr = m.group(0) ?? '';
-              return '$classAttr stroke="#444444"';
-            });
-            
-            // Re-stitch the modified group text back into the master string layout
+            // Re-stitch back into the layout
             workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
           }
-        } else {
-          print("Warning: Could not find SVG group layer for ID: $groupId");
         }
       }
     });
 
     return workingCopy;
-  }
-}
+  }}

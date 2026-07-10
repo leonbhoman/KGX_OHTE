@@ -27,11 +27,27 @@ class YardController {
     }
   }
 
-  // 2. Set up your default switch button states
+  // 2. Set up your default track layout states
   void initializeTrackDefaultStates() {
-    // Register the actual switch button names rather than raw layout groups
-    for (var switchName in _switchMap.keys) {
-      trackStates[switchName] = true; // Default to closed/energized
+    List<String> trackGroups = [
+      'SeasideOutFeed',
+      'LandsideInFeeder1',
+      'LandsideInFeeder2',
+      'SeasideInFeeder1',
+      'SeasideInFeeder2',
+      'LandsideOutFeed',
+      'C32R53to59',
+      'C16R46to52',
+      'C17R40to45',
+      'C18R32to39',
+      'C19R24to31',
+      'C20R16to23',
+      'C21R8to15',
+      'C22R1to7'
+    ];
+
+    for (var groupId in trackGroups) {
+      trackStates[groupId] = true; // Default to fully energized (colored)
     }
   }
 
@@ -53,11 +69,42 @@ class YardController {
     'C15' : 'LandsideOutFeed' 
   };
 
-  // 4. Logic to toggle states when a switch is flipped
+ // 4. Logic to toggle states when a switch is flipped
   void toggleSwitch(String switchName) {
-    if (trackStates.containsKey(switchName)) {
-      trackStates[switchName] = !trackStates[switchName]!;
-      print("Switch $switchName physically flipped to: ${trackStates[switchName]}");
+    final String? targetGroup = _switchMap[switchName];
+
+    if (targetGroup != null && trackStates.containsKey(targetGroup)) {
+      // 1. Toggle the clicked switch's track group state directly
+      trackStates[targetGroup] = !trackStates[targetGroup]!;
+      print("Switch $switchName flipped! Toggled track group: $targetGroup");
+
+      // 2. Enforce default baseline values before checking cascades
+      // (This makes sure things turn back on when parent switches close again)
+      trackStates['C16R46to52'] = trackStates['C16R46to52'] ?? true;
+      trackStates['C17R40to45'] = trackStates['C17R40to45'] ?? true;
+      trackStates['C32R53to59'] = trackStates['C32R53to59'] ?? true;
+      trackStates['SeasideOutFeed'] = trackStates['SeasideOutFeed'] ?? true;
+
+      // 3. Apply the live cascading rules directly to the states
+      bool switchC24Active = trackStates['SeasideInFeeder2'] ?? true;
+      bool switchC16Active = trackStates['C16R46to52'] ?? true;
+      bool switchC17Active = trackStates['C17R40to45'] ?? true;
+
+      // If C24 is open (isolated), it cuts power to C16 and C17 lines
+      if (!switchC24Active) {
+        trackStates['C16R46to52'] = false;
+        trackStates['C17R40to45'] = false;
+      }
+
+      // If C16 is isolated (either directly or via C24), it kills C32
+      if (!trackStates['C16R46to52']!) {
+        trackStates['C32R53to59'] = false;
+      }
+
+      // If C17 is isolated (either directly or via C24), it kills C10 (SeasideOutFeed)
+      if (!trackStates['C17R40to45']!) {
+        trackStates['SeasideOutFeed'] = false;
+      }
     }
   }
 
@@ -72,38 +119,13 @@ class YardController {
 /// Patch: Replaces specific hex colors within target de-energized groups
 /// Patch: Replaces specific hex colors within target de-energized groups taking cascading feeds into account
 /// Patch: Computes cascading power rules and applies them to the explicit SVG groups
+/// Patch: Replaces specific hex colors within target de-energized groups
   String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) return '';
 
     String workingCopy = rawSvgTemplate;
 
-    // 1. Isolate the parent switches for easy conditional rules
-    bool switchC24 = trackStates['C24'] ?? true;
-    bool switchC16 = trackStates['C16'] ?? true;
-    bool switchC17 = trackStates['C17'] ?? true;
-
-    // 2. Define your exact interlocking power cascade rules map
-    Map<String, bool> computedEnergizedStates = {
-      'SeasideInFeeder2' : switchC24, 
-      'C16R46to52'       : switchC16 && switchC24, // C24 down denies C16
-      'C17R40to45'       : switchC17 && switchC24, // C24 down denies C17
-      'C32R53to59'       : (trackStates['C32'] ?? true) && switchC16 && switchC24, // C16 down denies C32
-      'SeasideOutFeed'   : (trackStates['C10'] ?? true) && switchC17 && switchC24, // C17 down denies C10
-      
-      // These remaining tracks operate independently based on their own switches
-      'LandsideInFeeder1': trackStates['C23'] ?? true,
-      'LandsideInFeeder2': trackStates['C25'] ?? true,
-      'SeasideInFeeder1' : trackStates['T31'] ?? true,
-      'LandsideOutFeed'  : trackStates['C15'] ?? true,
-      'C18R32to39'       : trackStates['C18'] ?? true,
-      'C19R24to31'       : trackStates['C19'] ?? true,
-      'C20R16to23'       : trackStates['C20'] ?? true,
-      'C21R8to15'        : trackStates['C21'] ?? true,
-      'C22R1to7'         : trackStates['C22'] ?? true,
-    };
-
-    // 3. Loop through the computed states and gray out any isolated track groups
-    computedEnergizedStates.forEach((groupId, isEnergized) {
+    trackStates.forEach((groupId, isEnergized) {
       if (!isEnergized) {
         final String searchString = '<g id="$groupId">';
         int groupStartIndex = workingCopy.indexOf(searchString);
@@ -115,7 +137,6 @@ class YardController {
 
         String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
         
-        // Target explicit hex values to gray them out cleanly
         groupContent = groupContent.replaceAll('stroke="#ff0000"', 'stroke="#444444"');
         groupContent = groupContent.replaceAll('stroke="#0000ff"', 'stroke="#444444"');
         groupContent = groupContent.replaceAll('stroke="#00ffff"', 'stroke="#444444"');

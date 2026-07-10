@@ -51,22 +51,22 @@ class YardController {
     }
   }
 
-  // 3. Maps each clickable switch name directly to its corresponding SVG track group
+  // Look up dictionary mapping your physical switch button labels to their layout group IDs
   final Map<String, String> _switchMap = {
-    'C32' : 'C32R53to59',
-    'C16' : 'C16R46to52',
-    'C17' : 'C17R40to45',
-    'C18' : 'C18R32to39',
-    'C19' : 'C19R24to31',
-    'C20' : 'C20R16to23',
-    'C21' : 'C21R8to15',
-    'C22' : 'C22R1to7',
-    'C25' : 'LandsideInFeeder2', 
-    'T31' : 'SeasideInFeeder1', 
-    'C24' : 'SeasideInFeeder2', 
-    'C23' : 'LandsideInFeeder1', 
-    'C10' : 'SeasideOutFeed', 
-    'C15' : 'LandsideOutFeed' 
+    'T28': 'C32R53to59',       // Map the JSON label to the SVG group
+    'T29': 'C16R46to52',
+    'T30': 'C17R40to45',
+    'T34': 'C18R32to39',
+    'T27': 'C19R24to31',
+    'T26': 'C20R16to23',
+    'C21': 'C21R8to15',        // Keep if JSON labels match
+    'C22': 'C22R1to7',
+    'C25': 'LandsideInFeeder2',
+    'T31': 'SeasideInFeeder1',
+    'C24': 'SeasideInFeeder2',
+    'C23': 'LandsideInFeeder1',
+    'C10': 'SeasideOutFeed',
+    'C15': 'LandsideOutFeed',
   };
 
  // 4. Logic to toggle states when a switch is flipped

@@ -27,29 +27,12 @@ class YardController {
     }
   }
 
-  // 2. Set up your default track layout states
+  // 2. Set up your default switch button states
   void initializeTrackDefaultStates() {
-    // These names match your Illustrator SVG Group IDs exactly (with leading underscores)!
-    List<String> trackGroups = [
-      'SeasideOutFeed',
-      'LandsideInFeeder1',
-      'LandsideInFeeder2',
-      'SeasideInFeeder1',
-      'SeasideInFeeder2',
-      'LandsideOutFeed',
-      'C32R53to59',
-      'C16R46to52',
-      'C17R40to45',
-      'C18R32to39',
-      'C19R24to31',
-      'C20R16to23',
-      'C21R8to15',
-      'C22R1to7'
-    ];
-
-    for (var groupId in trackGroups) {
-      trackStates[groupId] = true; // Default to fully energized (colored)
-    }
+    // Register the actual switch button names rather than raw layout groups
+    _switchMap.keys.forEach((switchName) {
+      trackStates[switchName] = true; // Default to closed/energized
+    });
   }
 
   // 3. Maps each clickable switch name directly to its corresponding SVG track group
@@ -62,24 +45,19 @@ class YardController {
     'C20' : 'C20R16to23',
     'C21' : 'C21R8to15',
     'C22' : 'C22R1to7',
-    'C25' : 'LandsideInFeeder2', // right
-    'T31' : 'SeasideInFeeder1', // right
-    'C24' : 'SeasideInFeeder2', // right
-    'C23' : 'LandsideInFeeder1', // right
-    'C10' : 'SeasideOutFeed', // right
-    'C15' : 'LandsideOutFeed' // right
+    'C25' : 'LandsideInFeeder2', 
+    'T31' : 'SeasideInFeeder1', 
+    'C24' : 'SeasideInFeeder2', 
+    'C23' : 'LandsideInFeeder1', 
+    'C10' : 'SeasideOutFeed', 
+    'C15' : 'LandsideOutFeed' 
   };
 
   // 4. Logic to toggle states when a switch is flipped
   void toggleSwitch(String switchName) {
-    // Get the track group linked to this switch from our map
-    final String? targetGroup = _switchMap[switchName];
-
-    if (targetGroup != null && trackStates.containsKey(targetGroup)) {
-      trackStates[targetGroup] = !trackStates[targetGroup]!;
-      print("Switch $switchName flipped! Toggled track group: $targetGroup");
-    } else {
-      print("Switch $switchName flipped, but no track group is assigned to it yet.");
+    if (trackStates.containsKey(switchName)) {
+      trackStates[switchName] = !trackStates[switchName]!;
+      print("Switch $switchName physically flipped to: ${trackStates[switchName]}");
     }
   }
 
@@ -92,40 +70,56 @@ class YardController {
 /// Diagnostic Patch: Modifies track colors and logs exactly where strings mismatch
 /// Diagnostic Patch: Modifies track colors and logs exactly where strings mismatch
 /// Patch: Replaces specific hex colors within target de-energized groups
+/// Patch: Replaces specific hex colors within target de-energized groups taking cascading feeds into account
   String buildDynamicSvgCode() {
-    if (rawSvgTemplate.isEmpty) {
-      print("❌ DEBUG: rawSvgTemplate is completely EMPTY!");
-      return '';
-    }
+    if (rawSvgTemplate.isEmpty) return '';
 
     String workingCopy = rawSvgTemplate;
 
-    trackStates.forEach((groupId, isEnergized) {
+    // Define your exact yard interlocking power cascade rules
+    bool switchC24 = trackStates['C24'] ?? true;
+    bool switchC16 = trackStates['C16'] ?? true;
+    bool switchC17 = trackStates['C17'] ?? true;
+
+    // Evaluate the live cascading states
+    Map<String, bool> computedEnergizedStates = {
+      'SeasideOutFeed'   : (trackStates['C10'] ?? true) && switchC17 && switchC24, // C17 -> C10 cascade
+      'LandsideInFeeder1': trackStates['C23'] ?? true,
+      'LandsideInFeeder2': trackStates['C25'] ?? true,
+      'SeasideInFeeder1' : trackStates['T31'] ?? true,
+      'SeasideInFeeder2' : switchC24, 
+      'LandsideOutFeed'  : trackStates['C15'] ?? true,
+      'C16R46to52'       : switchC16 && switchC24, // C24 -> C16 cascade
+      'C32R53to59'       : (trackStates['C32'] ?? true) && switchC16 && switchC24, // C16 -> C32 cascade
+      'C17R40to45'       : switchC17 && switchC24, // C24 -> C17 cascade
+      'C18R32to39'       : trackStates['C18'] ?? true,
+      'C19R24to31'       : trackStates['C19'] ?? true,
+      'C20R16to23'       : trackStates['C20'] ?? true,
+      'C21R8to15'        : trackStates['C21'] ?? true,
+      'C22R1to7'         : trackStates['C22'] ?? true,
+    };
+
+    computedEnergizedStates.forEach((groupId, isEnergized) {
       if (!isEnergized) {
         final String searchString = '<g id="$groupId">';
         int groupStartIndex = workingCopy.indexOf(searchString);
         
-        if (groupStartIndex == -1) {
-          print("⚠️ Yard Debug: Could not find group matching '$searchString'");
-          return;
-        }
+        if (groupStartIndex == -1) return;
 
         int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
         if (groupEndIndex == -1) return;
 
-        // Isolate the text chunk for this group layer
         String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
         
-        // Target the explicit hex values you added to swap them to gray
-        groupContent = groupContent.replaceAll('stroke="#ff0000"', 'stroke="#444444"'); // Red
-        groupContent = groupContent.replaceAll('stroke="#0000ff"', 'stroke="#444444"'); // Blue
-        groupContent = groupContent.replaceAll('stroke="#00ffff"', 'stroke="#444444"'); // Aqua
+        // Dark gray transitions
+        groupContent = groupContent.replaceAll('stroke="#ff0000"', 'stroke="#444444"');
+        groupContent = groupContent.replaceAll('stroke="#0000ff"', 'stroke="#444444"');
+        groupContent = groupContent.replaceAll('stroke="#00ffff"', 'stroke="#444444"');
 
         groupContent = groupContent.replaceAll('fill="#ff0000"', 'fill="#444444"');
         groupContent = groupContent.replaceAll('fill="#0000ff"', 'fill="#444444"');
         groupContent = groupContent.replaceAll('fill="#00ffff"', 'fill="#444444"');
 
-        // Stitch the updated group data back into the copy
         workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
       }
     });

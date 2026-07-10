@@ -89,45 +89,59 @@ class YardController {
 /// Patch: Modifies track colors belonging to non-energized track groups
 /// Patch: Modifies track colors belonging to non-energized track groups
 /// Patch: Replaces raw color values with gray within de-energized layers
+/// Diagnostic Patch: Modifies track colors and logs exactly where strings mismatch
+/// Diagnostic Patch: Modifies track colors and logs exactly where strings mismatch
   String buildDynamicSvgCode() {
-    if (rawSvgTemplate.isEmpty) return '';
+    if (rawSvgTemplate.isEmpty) {
+      print("❌ DEBUG: rawSvgTemplate is completely EMPTY!");
+      return '';
+    }
 
     String workingCopy = rawSvgTemplate;
+    print("--- SVG Generation Cycle Started ---");
 
     trackStates.forEach((groupId, isEnergized) {
       if (!isEnergized) {
-        // Find where this specific yard section block starts
         final String searchString = '<g id="$groupId">';
         int groupStartIndex = workingCopy.indexOf(searchString);
         
-        if (groupStartIndex != -1) {
-          int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
-          
-          if (groupEndIndex != -1) {
-            // Isolate only the contents of this specific track group
-            String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
-            
-            // 1. Swap every version of red properties (both fills and strokes)
-            groupContent = groupContent.replaceAll('="red"', '="#444444"');
-            groupContent = groupContent.replaceAll('=red', '="#444444"');
-            groupContent = groupContent.replaceAll('="red "', '="#444444"');
-
-            // 2. Swap every version of blue properties (both fills and strokes)
-            groupContent = groupContent.replaceAll('="blue"', '="#444444"');
-            groupContent = groupContent.replaceAll('=blue', '="#444444"');
-            groupContent = groupContent.replaceAll('="blue "', '="#444444"');
-
-            // 3. Keep the feeder support working safely by swapping hex codes
-            groupContent = groupContent.replaceAll(RegExp(r'stroke="[^"]*"'), 'stroke="#444444"');
-            groupContent = groupContent.replaceAllMapped(RegExp(r'fill="([^"]*)"'), (match) {
-              final String fillValue = match.group(1) ?? '';
-              return fillValue == 'none' ? 'fill="none"' : 'fill="#444444"';
-            });
-            
-            // Re-stitch back into the layout
-            workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
-          }
+        if (groupStartIndex == -1) {
+          print("❌ ERROR: Could not find tag matching '$searchString' anywhere in the SVG string layout!");
+          return;
         }
+
+        int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
+        if (groupEndIndex == -1) {
+          print("❌ ERROR: Found start of group for '$groupId', but could not locate its matching closing '</g>' tag!");
+          return;
+        }
+
+        // Isolate the text slice for this group
+        String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
+        int originalLength = groupContent.length;
+
+        // Perform straight text substitutions targeting the yard segments
+        groupContent = groupContent.replaceAll('="red"', '="#444444"');
+        groupContent = groupContent.replaceAll('=red', '="#444444"');
+        groupContent = groupContent.replaceAll('="blue"', '="#444444"');
+        groupContent = groupContent.replaceAll('=blue', '="#444444"');
+        
+        // Feeders substitution fallback
+        groupContent = groupContent.replaceAll(RegExp(r'stroke="[^"]*"'), 'stroke="#444444"');
+        groupContent = groupContent.replaceAllMapped(RegExp(r'fill="([^"]*)"'), (match) {
+          final String fillValue = match.group(1) ?? '';
+          return fillValue == 'none' ? 'fill="none"' : 'fill="#444444"';
+        });
+
+        if (groupContent.length == originalLength) {
+          String snippet = groupContent.length > 60 ? groupContent.substring(0, 60) : groupContent;
+          print("⚠️ WARNING: Found group '$groupId', but no color text changes were made inside it. Content snippet: $snippet");
+        } else {
+          print("✅ SUCCESS: Successfully replaced color characters inside track group '$groupId'!");
+        }
+
+        // Stitch back into master template
+        workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
       }
     });
 

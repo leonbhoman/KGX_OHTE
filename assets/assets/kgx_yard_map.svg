@@ -525,7 +525,7 @@
     <polyline points="236.22 450.92 232.68 450.92 231.24 452.31 236.22 452.3" fill="#cc65ff" fill-rule="evenodd"/>
     <line x1="232.58" y1="407.66" x2="231.14" y2="407.67" fill="none" stroke="#cc65ff" stroke-linejoin="bevel" stroke-width="1.02"/>
   </g>
-  <g id="_1_to_7" data-name="1 to 7">
+  <g id="C22R1to7" data-name="C22R1to7">
     <polyline points="605.9 633.45 662.36 633.31 661.45 631.33 606.85 631.46" fill="red" fill-rule="evenodd"/>
     <polyline points="584.12 607.64 585.67 606.38 606.85 631.46 661.45 631.33 682.51 606.14" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>
     <polyline points="584.12 607.64 605.9 633.45 662.36 633.31 684.02 607.4" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>
@@ -616,7 +616,7 @@
     <line x1="544.66" y1="592.37" x2="546.22" y2="591.11" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>
     <line x1="546.22" y1="591.11" x2="558.85" y2="606.08" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>
   </g>
-  <g id="_8_to_15" data-name="8 to 15">
+  <g id="C21R8to15" data-name="8 to 15">
     <polyline points="640.99 529.38 548.05 529.61 549.67 531.58 640.03 531.36" fill="#65ff00" fill-rule="evenodd"/>
     <polyline points="645.51 537.83 640.03 531.36 550.99 531.58" fill="none" stroke="#65ff00" stroke-linejoin="bevel" stroke-width=".72"/>
     <polyline points="648.09 537.82 640.99 529.38 549.31 529.6" fill="none" stroke="#65ff00" stroke-linejoin="bevel" stroke-width=".72"/>
@@ -688,7 +688,7 @@
     <line x1="558.15" y1="540.02" x2="563.63" y2="546.55" fill="none" stroke="#65ff00" stroke-linejoin="bevel" stroke-width=".72"/>
     <line x1="572.67" y1="564.53" x2="571.23" y2="564.53" fill="none" stroke="#65ff00" stroke-linejoin="bevel" stroke-width="1.02"/>
   </g>
-  <g id="_16_to_23" data-name="16 to 23">
+  <g id="C20R16to23" data-name="16 to 23">
     <polyline points="536.62 441.97 649.96 441.7 650.85 439.72 536.61 439.99" fill="#fc0" fill-rule="evenodd"/>
     <line x1="536.61" y1="439.99" x2="650.85" y2="439.72" fill="none" stroke="#fc0" stroke-linejoin="bevel" stroke-width=".72"/>
     <line x1="536.62" y1="441.97" x2="649.96" y2="441.7" fill="none" stroke="#fc0" stroke-linejoin="bevel" stroke-width=".72"/>
@@ -794,7 +794,7 @@
     <line x1="543.63" y1="489.06" x2="556.27" y2="504.09" fill="none" stroke="#fc0" stroke-linejoin="bevel" stroke-width=".72"/>
     <line x1="672.12" y1="424.25" x2="673.61" y2="422.98" fill="none" stroke="#fc0" stroke-linejoin="bevel" stroke-width=".72"/>
   </g>
-  <g id="_24_to_31" data-name="24 to 31">
+  <g id="C19R24to31" data-name="24 to 31">
     <rect x="527.25" y="388.94" width="9.24" height="1.98" transform="translate(-.94 1.28) rotate(-.14)" fill="red"/>
     <line x1="527.25" y1="389.98" x2="535.17" y2="389.96" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>
     <polyline points="527.26 390.94 527.25 388.96 536.49 388.93" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>
@@ -874,7 +874,7 @@
     <line x1="487.2" y1="377.23" x2="487.26" y2="377.23" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>
     <line x1="536.5" y1="390.91" x2="536.49" y2="388.93" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>
   </g>
-  <g id="_32_to_39" data-name="32 to 39">
+  <g id="C18R32to39" data-name="32 to 39">
     <polyline points="474.63 338.08 480.55 331.05 479.05 329.73 473.13 336.83" fill="#65ff00" fill-rule="evenodd"/>
     <line x1="473.91" y1="337.48" x2="478.99" y2="331.35" fill="none" stroke="#65ff00" stroke-linejoin="bevel" stroke-width=".72"/>
     <polyline points="474.63 338.08 473.13 336.83 479.05 329.73" fill="none" stroke="#65ff00" stroke-linejoin="bevel" stroke-width=".72"/>
@@ -952,7 +952,7 @@
     <polyline points="459.64 319.1 461.92 316.39 461.79 314.41 458.56 318.2" fill="#65ff00" fill-rule="evenodd"/>
     <line x1="479.23" y1="329.91" x2="480.73" y2="331.17" fill="none" stroke="#65ff00" stroke-linejoin="bevel" stroke-width=".72"/>
   </g>
-  <g id="_40_to_45" data-name="40 to 45">
+  <g id="C17R40to45" data-name="40 to 45">
     <polyline points="470.13 286.91 475.99 279.82 474.49 278.56 468.56 285.66" fill="#965c00" fill-rule="evenodd"/>
     <polyline points="470.13 286.91 468.56 285.66 474.49 278.56" fill="none" stroke="#965c00" stroke-linejoin="bevel" stroke-width=".72"/>
     <polyline points="457.41 265.22 475.03 279.94 475.93 278.8 457.23 263.24" fill="#965c00" fill-rule="evenodd"/>
@@ -1033,7 +1033,7 @@
     <polyline points="455.14 267.93 457.41 265.22 457.23 263.24 454.06 267.03" fill="#965c00" fill-rule="evenodd"/>
     <polyline points="837.19 306.37 834 302.54 833.83 304.58 836.12 307.27" fill="#965c00" fill-rule="evenodd"/>
   </g>
-  <g id="_46_to_52" data-name="46 to 52">
+  <g id="C16R46to52" data-name="46 to 52">
     <polyline points="680.54 184.11 685.92 177.61 684.42 176.36 677.96 184.11" fill="red" fill-rule="evenodd"/>
     <line x1="679.22" y1="184.11" x2="684.3" y2="178.04" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>
     <line x1="678.8" y1="183.09" x2="684.42" y2="176.36" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>
@@ -1160,7 +1160,7 @@
     <line x1="547.04" y1="133.85" x2="547.04" y2="135.83" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>
     <line x1="518.62" y1="167.94" x2="518.62" y2="169.92" fill="none" stroke="red" stroke-linejoin="bevel" stroke-width=".72"/>
   </g>
-  <g id="_53_to_59" data-name="53 to 59">
+  <g id="C32R53to59" data-name="53 to 59">
     <polyline points="557.96 86.36 575.58 101.08 576.48 100 557.78 84.38" fill="blue" fill-rule="evenodd"/>
     <polyline points="555.69 89.13 554.61 88.23 557.78 84.38 575.69 99.34" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width="1.02"/>
     <polyline points="555.69 89.13 557.96 86.36 574.8 100.48" fill="none" stroke="blue" stroke-linejoin="bevel" stroke-width="1.02"/>

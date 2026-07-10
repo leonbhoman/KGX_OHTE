@@ -91,6 +91,7 @@ class YardController {
 /// Patch: Replaces raw color values with gray within de-energized layers
 /// Diagnostic Patch: Modifies track colors and logs exactly where strings mismatch
 /// Diagnostic Patch: Modifies track colors and logs exactly where strings mismatch
+/// Patch: Replaces specific hex colors within target de-energized groups
   String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) {
       print("❌ DEBUG: rawSvgTemplate is completely EMPTY!");
@@ -98,7 +99,6 @@ class YardController {
     }
 
     String workingCopy = rawSvgTemplate;
-    print("--- SVG Generation Cycle Started ---");
 
     trackStates.forEach((groupId, isEnergized) {
       if (!isEnergized) {
@@ -106,41 +106,26 @@ class YardController {
         int groupStartIndex = workingCopy.indexOf(searchString);
         
         if (groupStartIndex == -1) {
-          print("❌ ERROR: Could not find tag matching '$searchString' anywhere in the SVG string layout!");
+          print("⚠️ Yard Debug: Could not find group matching '$searchString'");
           return;
         }
 
         int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
-        if (groupEndIndex == -1) {
-          print("❌ ERROR: Found start of group for '$groupId', but could not locate its matching closing '</g>' tag!");
-          return;
-        }
+        if (groupEndIndex == -1) return;
 
-        // Isolate the text slice for this group
+        // Isolate the text chunk for this group layer
         String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
-        int originalLength = groupContent.length;
-
-        // Perform straight text substitutions targeting the yard segments
-        groupContent = groupContent.replaceAll('="red"', '="#444444"');
-        groupContent = groupContent.replaceAll('=red', '="#444444"');
-        groupContent = groupContent.replaceAll('="blue"', '="#444444"');
-        groupContent = groupContent.replaceAll('=blue', '="#444444"');
         
-        // Feeders substitution fallback
-        groupContent = groupContent.replaceAll(RegExp(r'stroke="[^"]*"'), 'stroke="#444444"');
-        groupContent = groupContent.replaceAllMapped(RegExp(r'fill="([^"]*)"'), (match) {
-          final String fillValue = match.group(1) ?? '';
-          return fillValue == 'none' ? 'fill="none"' : 'fill="#444444"';
-        });
+        // Target the explicit hex values you added to swap them to gray
+        groupContent = groupContent.replaceAll('stroke="#ff0000"', 'stroke="#444444"'); // Red
+        groupContent = groupContent.replaceAll('stroke="#0000ff"', 'stroke="#444444"'); // Blue
+        groupContent = groupContent.replaceAll('stroke="#00ffff"', 'stroke="#444444"'); // Aqua
 
-        if (groupContent.length == originalLength) {
-          String snippet = groupContent.length > 60 ? groupContent.substring(0, 60) : groupContent;
-          print("⚠️ WARNING: Found group '$groupId', but no color text changes were made inside it. Content snippet: $snippet");
-        } else {
-          print("✅ SUCCESS: Successfully replaced color characters inside track group '$groupId'!");
-        }
+        groupContent = groupContent.replaceAll('fill="#ff0000"', 'fill="#444444"');
+        groupContent = groupContent.replaceAll('fill="#0000ff"', 'fill="#444444"');
+        groupContent = groupContent.replaceAll('fill="#00ffff"', 'fill="#444444"');
 
-        // Stitch back into master template
+        // Stitch the updated group data back into the copy
         workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
       }
     });

@@ -85,6 +85,7 @@ class YardController {
 
   /// Patch: Modifies track colors belonging to non-energized track groups
 /// Patch: Modifies track colors belonging to non-energized track groups
+  /// Patch: Modifies track colors belonging to non-energized track groups
   String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) return '';
 
@@ -113,8 +114,7 @@ class YardController {
               return fillValue == 'none' ? 'fill="none"' : 'fill="#444444"';
             });
             
-            // 3. Catch paths relying on CSS classes by forcing an inline gray stroke override
-            // SVG rules dictate that inline attributes always override stylesheet classes.
+            // 3. Catch paths relying on unique CSS classes by forcing an inline gray stroke override
             groupContent = groupContent.replaceAllMapped(RegExp(r'class="([^"]*)"'), (match) {
               final String classAttr = match.group(0) ?? '';
               return '$classAttr stroke="#444444"';
@@ -128,4 +128,5 @@ class YardController {
     });
 
     return workingCopy;
-  }}
+  }
+  }

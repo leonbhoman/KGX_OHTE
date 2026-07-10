@@ -71,43 +71,28 @@ class YardController {
 
 // 4. Logic to toggle states when a switch is flipped
   void toggleSwitch(String switchName) {
-    // A clean lookup map inside the function to bridge the button label to the SVG group name
-    final Map<String, String> switchToGroupMap = {
-      'C32': 'C32R53to59',
-      'C16': 'C16R46to52',
-      'C17': 'C17R40to45',
-      'C18': 'C18R32to39',
-      'C19': 'C19R24to31',
-      'C20': 'C20R16to23',
-      'C21': 'C21R8to15',
-      'C22': 'C22R1to7',
-      'C25': 'LandsideInFeeder2',
-      'T31': 'SeasideInFeeder1',
-      'C24': 'SeasideInFeeder2',
-      'C23': 'LandsideInFeeder1',
-      'C10': 'SeasideOutFeed',
-      'C15': 'LandsideOutFeed',
-    };
-
-    final String? targetGroup = switchToGroupMap[switchName];
+    // Look up the true SVG group ID using the map that is already in your file!
+    final String? targetGroup = _switchMap[switchName];
 
     if (targetGroup != null && trackStates.containsKey(targetGroup)) {
       trackStates[targetGroup] = !trackStates[targetGroup]!;
       print("Switch $switchName flipped! Toggled track group: $targetGroup");
     } else {
-      print("⚠️ Click registered for '$switchName', but it isn't mapped to a valid track group.");
+      print("⚠️ Click registered for '$switchName', but it isn't mapped to a valid track group inside trackStates.");
     }
-  }  String buildDynamicSvgCode() {
+  }
+  
+String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) return '';
 
     String workingCopy = rawSvgTemplate;
 
-    // 1. Read the raw, independent state of the parent groups
+    // 1. Isolate the current independent state of your parent groups
     bool switchC24Active = trackStates['SeasideInFeeder2'] ?? true;
     bool switchC16Active = trackStates['C16R46to52'] ?? true;
     bool switchC17Active = trackStates['C17R40to45'] ?? true;
 
-    // 2. Compute the cascading interlocking rules live
+    // 2. Map out the cascading power rules live
     Map<String, bool> computedEnergizedStates = {
       // Direct pass-throughs
       'LandsideInFeeder1': trackStates['LandsideInFeeder1'] ?? true,
@@ -120,15 +105,15 @@ class YardController {
       'C21R8to15'        : trackStates['C21R8to15'] ?? true,
       'C22R1to7'         : trackStates['C22R1to7'] ?? true,
       
-      // Cascading elements
+      // Cascading logic tracks
       'SeasideInFeeder2' : switchC24Active, 
-      'C16R46to52'       : switchC16Active && switchC24Active, // C24 turns off C16
-      'C17R40to45'       : switchC17Active && switchC24Active, // C24 turns off C17
-      'C32R53to59'       : (trackStates['C32R53to59'] ?? true) && switchC16Active && switchC24Active, // C16 or C24 turns off C32
-      'SeasideOutFeed'   : (trackStates['SeasideOutFeed'] ?? true) && switchC17Active && switchC24Active, // C17 or C24 turns off C10
+      'C16R46to52'       : switchC16Active && switchC24Active, // C24 off drops C16
+      'C17R40to45'       : switchC17Active && switchC24Active, // C24 off drops C17
+      'C32R53to59'       : (trackStates['C32R53to59'] ?? true) && switchC16Active && switchC24Active, // C16 or C24 off drops C32
+      'SeasideOutFeed'   : (trackStates['SeasideOutFeed'] ?? true) && switchC17Active && switchC24Active, // C17 or C24 off drops C10
     };
 
-    // 3. Apply colors to the layout based on the computed live states
+    // 3. Process the computed states and gray out isolated blocks
     computedEnergizedStates.forEach((groupId, isEnergized) {
       if (!isEnergized) {
         final String searchString = '<g id="$groupId">';

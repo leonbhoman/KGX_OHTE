@@ -71,17 +71,33 @@ class YardController {
 
 // 4. Logic to toggle states when a switch is flipped
   void toggleSwitch(String switchName) {
-    // Translate the switch label (e.g., 'C16') to its SVG group ID (e.g., 'C16R46to52')
-    final String? targetGroup = _switchMap[switchName];
+    // A clean lookup map inside the function to bridge the button label to the SVG group name
+    final Map<String, String> switchToGroupMap = {
+      'C32': 'C32R53to59',
+      'C16': 'C16R46to52',
+      'C17': 'C17R40to45',
+      'C18': 'C18R32to39',
+      'C19': 'C19R24to31',
+      'C20': 'C20R16to23',
+      'C21': 'C21R8to15',
+      'C22': 'C22R1to7',
+      'C25': 'LandsideInFeeder2',
+      'T31': 'SeasideInFeeder1',
+      'C24': 'SeasideInFeeder2',
+      'C23': 'LandsideInFeeder1',
+      'C10': 'SeasideOutFeed',
+      'C15': 'LandsideOutFeed',
+    };
+
+    final String? targetGroup = switchToGroupMap[switchName];
 
     if (targetGroup != null && trackStates.containsKey(targetGroup)) {
       trackStates[targetGroup] = !trackStates[targetGroup]!;
       print("Switch $switchName flipped! Toggled track group: $targetGroup");
     } else {
-      print("⚠️ Warning: No matching track group found for switch: $switchName");
+      print("⚠️ Click registered for '$switchName', but it isn't mapped to a valid track group.");
     }
-  }
-  String buildDynamicSvgCode() {
+  }  String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) return '';
 
     String workingCopy = rawSvgTemplate;

@@ -29,6 +29,7 @@ class YardController {
 
   // 2. Set up your default track layout states
   void initializeTrackDefaultStates() {
+    // These names match your Illustrator SVG Group IDs exactly (with leading underscores)!
     List<String> trackGroups = [
       'SeasideOutFeed',
       'LandsideInFeeder1',
@@ -51,89 +52,80 @@ class YardController {
     }
   }
 
-  // Look up dictionary mapping your physical switch button labels to their layout group IDs
+  // 3. Maps each clickable switch name directly to its corresponding SVG track group
   final Map<String, String> _switchMap = {
-    'T28': 'C32R53to59',       // Map the JSON label to the SVG group
-    'T29': 'C16R46to52',
-    'T30': 'C17R40to45',
-    'T34': 'C18R32to39',
-    'T27': 'C19R24to31',
-    'T26': 'C20R16to23',
-    'C21': 'C21R8to15',        // Keep if JSON labels match
-    'C22': 'C22R1to7',
-    'C25': 'LandsideInFeeder2',
-    'T31': 'SeasideInFeeder1',
-    'C24': 'SeasideInFeeder2',
-    'C23': 'LandsideInFeeder1',
-    'C10': 'SeasideOutFeed',
-    'C15': 'LandsideOutFeed',
+    'C32' : 'C32R53to59',
+    'C16' : 'C16R46to52',
+    'C17' : 'C17R40to45',
+    'C18' : 'C18R32to39',
+    'C19' : 'C19R24to31',
+    'C20' : 'C20R16to23',
+    'C21' : 'C21R8to15',
+    'C22' : 'C22R1to7',
+    'C25' : 'LandsideInFeeder2', // right
+    'T31' : 'SeasideInFeeder1', // right
+    'C24' : 'SeasideInFeeder2', // right
+    'C23' : 'LandsideInFeeder1', // right
+    'C10' : 'SeasideOutFeed', // right
+    'C15' : 'LandsideOutFeed' // right
   };
 
-// 4. Logic to toggle states when a switch is flipped
+  // 4. Logic to toggle states when a switch is flipped
   void toggleSwitch(String switchName) {
-    // Look up the true SVG group ID using the map that is already in your file!
+    // Get the track group linked to this switch from our map
     final String? targetGroup = _switchMap[switchName];
 
     if (targetGroup != null && trackStates.containsKey(targetGroup)) {
       trackStates[targetGroup] = !trackStates[targetGroup]!;
       print("Switch $switchName flipped! Toggled track group: $targetGroup");
     } else {
-      print("⚠️ Click registered for '$switchName', but it isn't mapped to a valid track group inside trackStates.");
+      print("Switch $switchName flipped, but no track group is assigned to it yet.");
     }
   }
-  
-String buildDynamicSvgCode() {
-    if (rawSvgTemplate.isEmpty) return '';
+
+  /// Patch: Modifies track colors belonging to non-energized track groups
+/// Patch: Modifies track colors belonging to non-energized track groups
+  /// Patch: Modifies track colors belonging to non-energized track groups
+/// Patch: Modifies track colors belonging to non-energized track groups
+/// Patch: Modifies track colors belonging to non-energized track groups
+/// Patch: Replaces raw color values with gray within de-energized layers
+/// Diagnostic Patch: Modifies track colors and logs exactly where strings mismatch
+/// Diagnostic Patch: Modifies track colors and logs exactly where strings mismatch
+/// Patch: Replaces specific hex colors within target de-energized groups
+  String buildDynamicSvgCode() {
+    if (rawSvgTemplate.isEmpty) {
+      print("❌ DEBUG: rawSvgTemplate is completely EMPTY!");
+      return '';
+    }
 
     String workingCopy = rawSvgTemplate;
 
-    // 1. Isolate the current independent state of your parent groups
-    bool switchC24Active = trackStates['SeasideInFeeder2'] ?? true;
-    bool switchC16Active = trackStates['C16R46to52'] ?? true;
-    bool switchC17Active = trackStates['C17R40to45'] ?? true;
-
-    // 2. Map out the cascading power rules live
-    Map<String, bool> computedEnergizedStates = {
-      // Direct pass-throughs
-      'LandsideInFeeder1': trackStates['LandsideInFeeder1'] ?? true,
-      'LandsideInFeeder2': trackStates['LandsideInFeeder2'] ?? true,
-      'SeasideInFeeder1' : trackStates['SeasideInFeeder1'] ?? true,
-      'LandsideOutFeed'  : trackStates['LandsideOutFeed'] ?? true,
-      'C18R32to39'       : trackStates['C18R32to39'] ?? true,
-      'C19R24to31'       : trackStates['C19R24to31'] ?? true,
-      'C20R16to23'       : trackStates['C20R16to23'] ?? true,
-      'C21R8to15'        : trackStates['C21R8to15'] ?? true,
-      'C22R1to7'         : trackStates['C22R1to7'] ?? true,
-      
-      // Cascading logic tracks
-      'SeasideInFeeder2' : switchC24Active, 
-      'C16R46to52'       : switchC16Active && switchC24Active, // C24 off drops C16
-      'C17R40to45'       : switchC17Active && switchC24Active, // C24 off drops C17
-      'C32R53to59'       : (trackStates['C32R53to59'] ?? true) && switchC16Active && switchC24Active, // C16 or C24 off drops C32
-      'SeasideOutFeed'   : (trackStates['SeasideOutFeed'] ?? true) && switchC17Active && switchC24Active, // C17 or C24 off drops C10
-    };
-
-    // 3. Process the computed states and gray out isolated blocks
-    computedEnergizedStates.forEach((groupId, isEnergized) {
+    trackStates.forEach((groupId, isEnergized) {
       if (!isEnergized) {
         final String searchString = '<g id="$groupId">';
         int groupStartIndex = workingCopy.indexOf(searchString);
         
-        if (groupStartIndex == -1) return;
+        if (groupStartIndex == -1) {
+          print("⚠️ Yard Debug: Could not find group matching '$searchString'");
+          return;
+        }
 
         int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
         if (groupEndIndex == -1) return;
 
+        // Isolate the text chunk for this group layer
         String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
         
-        groupContent = groupContent.replaceAll('stroke="#ff0000"', 'stroke="#444444"');
-        groupContent = groupContent.replaceAll('stroke="#0000ff"', 'stroke="#444444"');
-        groupContent = groupContent.replaceAll('stroke="#00ffff"', 'stroke="#444444"');
+        // Target the explicit hex values you added to swap them to gray
+        groupContent = groupContent.replaceAll('stroke="#ff0000"', 'stroke="#444444"'); // Red
+        groupContent = groupContent.replaceAll('stroke="#0000ff"', 'stroke="#444444"'); // Blue
+        groupContent = groupContent.replaceAll('stroke="#00ffff"', 'stroke="#444444"'); // Aqua
 
         groupContent = groupContent.replaceAll('fill="#ff0000"', 'fill="#444444"');
         groupContent = groupContent.replaceAll('fill="#0000ff"', 'fill="#444444"');
         groupContent = groupContent.replaceAll('fill="#00ffff"', 'fill="#444444"');
 
+        // Stitch the updated group data back into the copy
         workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
       }
     });

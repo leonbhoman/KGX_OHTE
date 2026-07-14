@@ -83,50 +83,35 @@ class YardController {
     }
   }
 
-  /// Patch: Modifies track colors belonging to non-energized track groups
-/// Patch: Modifies track colors belonging to non-energized track groups
-  /// Patch: Modifies track colors belonging to non-energized track groups
-/// Patch: Modifies track colors belonging to non-energized track groups
-/// Patch: Modifies track colors belonging to non-energized track groups
-/// Patch: Replaces raw color values with gray within de-energized layers
-/// Diagnostic Patch: Modifies track colors and logs exactly where strings mismatch
-/// Diagnostic Patch: Modifies track colors and logs exactly where strings mismatch
-/// Patch: Replaces specific hex colors within target de-energized groups
+  /// Patch: Modifies only the stroke colors belonging to non-energized track groups
   String buildDynamicSvgCode() {
-    if (rawSvgTemplate.isEmpty) {
-      print("❌ DEBUG: rawSvgTemplate is completely EMPTY!");
-      return '';
-    }
+    if (rawSvgTemplate.isEmpty) return '';
 
     String workingCopy = rawSvgTemplate;
 
     trackStates.forEach((groupId, isEnergized) {
       if (!isEnergized) {
+        // Find where this specific track group block starts
         final String searchString = '<g id="$groupId">';
         int groupStartIndex = workingCopy.indexOf(searchString);
         
-        if (groupStartIndex == -1) {
-          print("⚠️ Yard Debug: Could not find group matching '$searchString'");
-          return;
+        if (groupStartIndex != -1) {
+          // Find where this group block ends
+          int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
+          
+          if (groupEndIndex != -1) {
+            // Extract just the inner path content for this track segment
+            String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
+            
+            // Target the stroke properties inside this group only
+            // Swap 'stroke="blue"' with a de-energized gray 'stroke="#444444"'
+            groupContent = groupContent.replaceAll('stroke="blue"', 'stroke="#444444"');
+            groupContent = groupContent.replaceAll('fill="blue"', 'fill="#444444"'); // For track arrows/polylines
+            
+            // Re-stitch the modified group text back into the master string layout
+            workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
+          }
         }
-
-        int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
-        if (groupEndIndex == -1) return;
-
-        // Isolate the text chunk for this group layer
-        String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
-        
-        // Target the explicit hex values you added to swap them to gray
-        groupContent = groupContent.replaceAll('stroke="#ff0000"', 'stroke="#444444"'); // Red
-        groupContent = groupContent.replaceAll('stroke="#0000ff"', 'stroke="#444444"'); // Blue
-        groupContent = groupContent.replaceAll('stroke="#00ffff"', 'stroke="#444444"'); // Aqua
-
-        groupContent = groupContent.replaceAll('fill="#ff0000"', 'fill="#444444"');
-        groupContent = groupContent.replaceAll('fill="#0000ff"', 'fill="#444444"');
-        groupContent = groupContent.replaceAll('fill="#00ffff"', 'fill="#444444"');
-
-        // Stitch the updated group data back into the copy
-        workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
       }
     });
 

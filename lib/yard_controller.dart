@@ -17,10 +17,10 @@ class YardController {
   String rawSvgTemplate = '';
   Map<String, List<double>> switchCoordinates = {};
   
-  // This map tracks the live state of each switch (true = closed/green, false = open/red)
+  // Tracks the live state of each switch (true = closed/green, false = open/red)
   final Map<String, bool> switchStates = {};
 
-  // Master Definition Table connecting Switches, Tracks, and their Initial States
+  // Master Table: Connects your switches, track groups, and their initial states
   final List<SwitchDefinition> switchDefinitions = [
     const SwitchDefinition(name: 'C32', trackGroupId: 'C32R53to59'),
     const SwitchDefinition(name: 'C16', trackGroupId: 'C16R46to52'),
@@ -36,29 +36,24 @@ class YardController {
     const SwitchDefinition(name: 'C23', trackGroupId: 'LandsideInFeeder1'),
     const SwitchDefinition(name: 'C10', trackGroupId: 'SeasideOutFeed'),
     const SwitchDefinition(name: 'C15', trackGroupId: 'LandsideOutFeed'),
-    
-    // Example: If C35 is added to your coordinates, it will automatically default to Open (Red)
-    const SwitchDefinition(name: 'C35', trackGroupId: 'C32R53to59', initialClosed: false), 
   ];
 
-  // Load configuration and set up initial states
+  // Load coordinates and SVG layout
   Future<void> initializeYardData() async {
     try {
-      // 1. Load coordinates
       final String jsonString = await rootBundle.loadString('assets/kgx_switch-coords.json');
       switchCoordinates = Map<String, List<double>>.from(jsonDecode(jsonString).map(
         (key, value) => MapEntry(key, List<double>.from(value))
       ));
       
-      // 2. Load SVG layout
       rawSvgTemplate = await rootBundle.loadString('assets/kgx_yard_map.svg');
       
-      // 3. Initialize active switch states from our definitions
+      // Setup initial switch states from definitions
       for (var definition in switchDefinitions) {
         switchStates[definition.name] = definition.initialClosed;
       }
     } catch (e) {
-      print("Error initializing yard data: $e");
+      print("Error loading yard data: $e");
     }
   }
 
@@ -70,17 +65,16 @@ class YardController {
     }
   }
 
-  // Generates SVG code with injected CSS styles to turn non-energized tracks gray
+  // Generates SVG code with dynamic CSS overrides to turn open-switch tracks gray
   String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) return '';
 
-    // Generate CSS rules to dynamically override track colors
     String cssOverrides = '';
 
     for (var definition in switchDefinitions) {
       bool isClosed = switchStates[definition.name] ?? true;
       
-      // If the switch is Open, the track is de-energized (turns gray #444444)
+      // If the switch is Open, turn all elements within that track group gray (#444444)
       if (!isClosed) {
         cssOverrides += '''
           #${definition.trackGroupId} path, 
@@ -99,7 +93,7 @@ class YardController {
       return rawSvgTemplate;
     }
 
-    // Inject the CSS style block right after the opening <svg> tag
+    // Inject the style block cleanly right inside the opening <svg> tag
     final String styleBlock = '<style>$cssOverrides</style>';
     final int insertIndex = rawSvgTemplate.indexOf('>');
     

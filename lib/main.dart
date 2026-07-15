@@ -52,7 +52,7 @@ class _YardMapScreenState extends State<YardMapScreen> {
       final double x = coords[0];
       final double y = coords[1];
 
-      // Retrieve state of switch directly from our states map
+      // Retrieve state of the switch directly from our states map
       final bool isSwitchClosed = _controller.switchStates[switchName] ?? true;
 
       nodes.add(
@@ -128,8 +128,8 @@ class _YardMapScreenState extends State<YardMapScreen> {
             child: SingleChildScrollView(
               scrollDirection: Axis.vertical,
               child: Container(
-                width: 1605, // Matches SVG viewBox width
-                height: 1111, // Matches SVG viewBox height
+                width: 1605, // Hardcoded to match SVG viewBox width
+                height: 1111, // Hardcoded to match SVG viewBox height
                 color: Colors.black,
                 child: Stack(
                   children: [

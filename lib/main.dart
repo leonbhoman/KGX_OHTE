@@ -94,34 +94,46 @@ class _YardMapScreenState extends State<YardMapScreen> {
       final double x = (coords[0] as num).toDouble();
       final double y = (coords[1] as num).toDouble();
 
+// Retrieve the current state of this switch (defaulting to false if unknown)
+      bool isSwitchClosed = _controller.switchStates[switchName] ?? false;
+
       nodes.add(
         Positioned(
-          left: x - 12, // Perfectly centers your 24px button over the coordinate point
+          left: x - 12, 
           top: y - 12,
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              behavior: HitTestBehavior.opaque, // Tells Flutter: treat the whole box area as clickable
+              behavior: HitTestBehavior.opaque, 
               onTap: () {
                 setState(() {
                   _controller.toggleSwitch(switchName);
                 });
               },
               child: Tooltip(
-                message: 'Switch $switchName',
+                message: 'Switch $switchName (${isSwitchClosed ? "Closed / ON" : "Open / OFF"})',
                 child: Container(
-                  width: 24,  // Keeping your preferred compact dimensions
+                  width: 24,  
                   height: 24,
                   decoration: BoxDecoration(
-                    // Solid dark background color captures clicks 100% across the circle's interior
+                    // Solid dark background
                     color: const Color(0xFF222222), 
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.yellow, width: 2),
+                    // BORDER turns Green when Closed (ON), and Red when Open (OFF)
+                    border: Border.all(
+                      color: isSwitchClosed ? Colors.greenAccent : Colors.redAccent, 
+                      width: 2.5
+                    ),
                   ),
                   child: Center(
                     child: Text(
                       switchName, 
-                      style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.yellow)
+                      style: TextStyle(
+                        fontSize: 8, 
+                        fontWeight: FontWeight.bold, 
+                        // Text changes color to match the border status
+                        color: isSwitchClosed ? Colors.greenAccent : Colors.redAccent,
+                      )
                     ),
                   ),
                 ),
@@ -129,8 +141,7 @@ class _YardMapScreenState extends State<YardMapScreen> {
             ),
           ),
         ),
-      );
-    });
+      );    });
 
     return nodes;
   }

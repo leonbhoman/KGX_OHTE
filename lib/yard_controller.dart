@@ -110,22 +110,30 @@ class YardController {
     // SeasideOutFeed base state: Energized if C10 is closed
     bool seasideBaseEnergized = switchStates['C10'] ?? true;
 
-    // B. Apply C35 Tie/Isolator Logic
+// B. Apply C35 Tie/Isolator Logic
     bool finalLandsideOutState = landsideBaseEnergized;
     bool finalSeasideOutState = seasideBaseEnergized;
 
     bool isC35Closed = switchStates['C35'] ?? false;
+    
     if (isC35Closed) {
-      // If the bridge is closed, power from either side energizes both sides
-      bool combinedPower = landsideBaseEnergized || seasideBaseEnergized;
-      finalLandsideOutState = combinedPower;
-      finalSeasideOutState = combinedPower;
+      // If C35 is CLOSED, power bridges across. 
+      // This means if EITHER side is energized, BOTH sides become energized!
+      if (landsideBaseEnergized || seasideBaseEnergized) {
+        finalLandsideOutState = true;
+        finalSeasideOutState = true;
+      }
+    } else {
+      // If C35 is OPEN, they are completely isolated.
+      // LandsideOutFeed only cares about its own 4 switches.
+      // SeasideOutFeed only cares about C10.
+      finalLandsideOutState = landsideBaseEnergized;
+      finalSeasideOutState = seasideBaseEnergized;
     }
 
     // Save final calculated track states
     computedTrackStates['LandsideOutFeed'] = finalLandsideOutState;
     computedTrackStates['SeasideOutFeed'] = finalSeasideOutState;
-
 
     // --- STEP 2: APPLY SWAP COLOR REPLACEMENTS ON DE-ENERGIZED TRACKS ---
     computedTrackStates.forEach((trackGroupId, isEnergized) {

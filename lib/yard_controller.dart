@@ -21,8 +21,7 @@ class YardController {
   final Map<String, bool> switchStates = {};
 
   // Master Table: Connects your switches, track groups, and their initial states
-  final List<SwitchDefinition> switchDefinitions = [
-    const SwitchDefinition(name: 'C32', trackGroupId: 'C32R53to59'),
+  final List<SwitchDefinition> switchDefinitions = [const SwitchDefinition(name: 'C32', trackGroupId: 'C32R53to59'),
     const SwitchDefinition(name: 'C16', trackGroupId: 'C16R46to52'),
     const SwitchDefinition(name: 'C17', trackGroupId: 'C17R40to45'),
     const SwitchDefinition(name: 'C18', trackGroupId: 'C18R32to39'),
@@ -34,8 +33,18 @@ class YardController {
     const SwitchDefinition(name: 'T31', trackGroupId: 'SeasideInFeeder1'),
     const SwitchDefinition(name: 'C24', trackGroupId: 'SeasideInFeeder2'),
     const SwitchDefinition(name: 'C23', trackGroupId: 'LandsideInFeeder1'),
-    const SwitchDefinition(name: 'C10', trackGroupId: 'SeasideOutFeed'),
+    
+    // Switches involved in the LandsideOutFeed logic:
     const SwitchDefinition(name: 'C15', trackGroupId: 'LandsideOutFeed'),
+    const SwitchDefinition(name: 'C14', trackGroupId: 'LandsideOutFeed'),
+    const SwitchDefinition(name: 'C13', trackGroupId: 'LandsideOutFeed'),
+    const SwitchDefinition(name: 'C12', trackGroupId: 'LandsideOutFeed'),
+
+    // The Seaside control switch:
+    const SwitchDefinition(name: 'C10', trackGroupId: 'SeasideOutFeed'),
+
+    // C35 acts as a Tie/Isolating Switch (starts OPEN/Red by default)
+    const SwitchDefinition(name: 'C35', trackGroupId: 'C35_Isolator', initialClosed: false),
   ];
 
   // Load coordinates and SVG layout
@@ -70,30 +79,66 @@ class YardController {
   /// of de-energized track groups and replacing their colors.
 /// Generates the SVG code by isolating target track group blocks 
   /// and swapping color codes using simple string replacements.
+  /// Generates the SVG code by evaluating our control logic rules 
+  /// and replacing colors in the de-energized track blocks.
   String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) return '';
 
     String workingCopy = rawSvgTemplate;
 
+    // --- STEP 1: CALCULATE THE ENERGIZED STATE OF EACH TRACK GROUP ---
+    final Map<String, bool> computedTrackStates = {};
+
+    // Standard 1-to-1 default tracks
     for (var definition in switchDefinitions) {
-      bool isClosed = switchStates[definition.name] ?? true;
-      
-      // If the switch is Open, the track segment must turn gray (#444444)
-      if (!isClosed) {
-        // Find the exact starting tag for this specific track group
-        final String searchString = '<g id="${definition.trackGroupId}">';
+      // Skip groups that have custom logic rules below
+      if (definition.trackGroupId == 'LandsideOutFeed' || 
+          definition.trackGroupId == 'SeasideOutFeed' ||
+          definition.trackGroupId == 'C35_Isolator') {
+        continue;
+      }
+      computedTrackStates[definition.trackGroupId] = switchStates[definition.name] ?? true;
+    }
+
+    // A. Evaluate the Base States (before C35 logic is applied)
+    // LandsideOutFeed base state: Energized if C12, C13, C14, OR C15 is closed
+    bool landsideBaseEnergized = (switchStates['C12'] ?? true) ||
+                                 (switchStates['C13'] ?? true) ||
+                                 (switchStates['C14'] ?? true) ||
+                                 (switchStates['C15'] ?? true);
+
+    // SeasideOutFeed base state: Energized if C10 is closed
+    bool seasideBaseEnergized = switchStates['C10'] ?? true;
+
+    // B. Apply C35 Tie/Isolator Logic
+    bool finalLandsideOutState = landsideBaseEnergized;
+    bool finalSeasideOutState = seasideBaseEnergized;
+
+    bool isC35Closed = switchStates['C35'] ?? false;
+    if (isC35Closed) {
+      // If the bridge is closed, power from either side energizes both sides
+      bool combinedPower = landsideBaseEnergized || seasideBaseEnergized;
+      finalLandsideOutState = combinedPower;
+      finalSeasideOutState = combinedPower;
+    }
+
+    // Save final calculated track states
+    computedTrackStates['LandsideOutFeed'] = finalLandsideOutState;
+    computedTrackStates['SeasideOutFeed'] = finalSeasideOutState;
+
+
+    // --- STEP 2: APPLY SWAP COLOR REPLACEMENTS ON DE-ENERGIZED TRACKS ---
+    computedTrackStates.forEach((trackGroupId, isEnergized) {
+      if (!isEnergized) {
+        final String searchString = '<g id="$trackGroupId">';
         final int groupStartIndex = workingCopy.indexOf(searchString);
         
         if (groupStartIndex != -1) {
-          // Find the end of this specific group block
           final int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
           
           if (groupEndIndex != -1) {
-            // Extract ONLY the inner XML content for this track segment
             String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
             
-            // Loop through all colors present in your SVG and swap them to gray
-            // This preserves transparency because it completely ignores 'none'
             final List<String> targetColors = [
               '#0000ff', // Blue
               '#00ffff', // Aqua
@@ -109,13 +154,12 @@ class YardController {
               groupContent = groupContent.replaceAll('fill="$color"', 'fill="#444444"');
             }
             
-            // Stitch the modified group text back into the master SVG layout
             workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
           }
         }
       }
-    }
+    });
 
     return workingCopy;
   }
-  }
+}

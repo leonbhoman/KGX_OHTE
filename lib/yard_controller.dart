@@ -66,45 +66,56 @@ class YardController {
   }
 
   // Generates SVG code with dynamic CSS overrides to turn open-switch tracks gray
+/// Generates the SVG code by targeting ONLY the specific text blocks 
+  /// of de-energized track groups and replacing their colors.
+/// Generates the SVG code by isolating target track group blocks 
+  /// and swapping color codes using simple string replacements.
   String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) return '';
 
-    String cssOverrides = '';
+    String workingCopy = rawSvgTemplate;
 
     for (var definition in switchDefinitions) {
       bool isClosed = switchStates[definition.name] ?? true;
       
-      // If the switch is Open, turn all elements within that track group gray (#444444)
+      // If the switch is Open, the track segment must turn gray (#444444)
       if (!isClosed) {
-        cssOverrides += '''
-          #${definition.trackGroupId} path, 
-          #${definition.trackGroupId} line, 
-          #${definition.trackGroupId} polyline, 
-          #${definition.trackGroupId} rect, 
-          #${definition.trackGroupId} circle {
-            stroke: #444444 !important;
-            fill: #444444 !important;
+        // Find the exact starting tag for this specific track group
+        final String searchString = '<g id="${definition.trackGroupId}">';
+        final int groupStartIndex = workingCopy.indexOf(searchString);
+        
+        if (groupStartIndex != -1) {
+          // Find the end of this specific group block
+          final int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
+          
+          if (groupEndIndex != -1) {
+            // Extract ONLY the inner XML content for this track segment
+            String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
+            
+            // Loop through all colors present in your SVG and swap them to gray
+            // This preserves transparency because it completely ignores 'none'
+            final List<String> targetColors = [
+              '#0000ff', // Blue
+              '#00ffff', // Aqua
+              '#cc65ff', // Purple
+              '#ff0000', // Red
+              '#65ff00', // Lime Green
+              '#ffcc00', // Yellow
+              '#965c00', // Brown
+            ];
+
+            for (String color in targetColors) {
+              groupContent = groupContent.replaceAll('stroke="$color"', 'stroke="#444444"');
+              groupContent = groupContent.replaceAll('fill="$color"', 'fill="#444444"');
+            }
+            
+            // Stitch the modified group text back into the master SVG layout
+            workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
           }
-        ''';
+        }
       }
     }
 
-    if (cssOverrides.isEmpty) {
-      return rawSvgTemplate;
-    }
-
-    // Inject the style block cleanly right inside the opening <svg> tag
-    final String styleBlock = '<style>$cssOverrides</style>';
-    final int insertIndex = rawSvgTemplate.indexOf('>');
-    
-    if (insertIndex != -1) {
-      return rawSvgTemplate.replaceRange(
-        insertIndex + 1, 
-        insertIndex + 1, 
-        '\n$styleBlock\n'
-      );
-    }
-
-    return rawSvgTemplate;
+    return workingCopy;
   }
-}
+  }

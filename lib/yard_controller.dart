@@ -3,88 +3,14 @@ import 'package:flutter/services.dart';
 
 String rawSvgTemplate = '';
 
-/// Represents a physical connection between two track sections through a switch
-class TrackConnection {
-  final String neighbor;
-  final String switchName;
-
-  TrackConnection({required this.neighbor, required this.switchName});
-}
-
 class YardController {
-  // Active state of each switch: true = CLOSED (conducting), false = OPEN (isolated)
-  final Map<String, bool> switchStates = {};
-
-  // Track state cache calculated dynamically after switch toggles: true = Hot, false = Dead
+  // Keeps track of which track groups are energized (true) or isolated (false)
   final Map<String, bool> trackStates = {};
-
-  // Holds the coordinate locations for all clickable switches
+  
+  // Holds the coordinate locations for all your clickable switch bubbles
   Map<String, List<double>> switchCoordinates = {};
 
-  // Define the master power feeds (where power enters the yard)
-  // For safety/default, we assume power is fed into these main boundaries:
-  final List<String> powerSources = [
-    'SeasideInFeeder1',
-    'SeasideInFeeder2',
-    'LandsideInFeeder1',
-    'LandsideInFeeder2',
-  ];
-
-  // The connectivity graph representing how track sections touch via switches
-  final Map<String, List<TrackConnection>> networkGraph = {
-    // Seaside Outfeed connects to Landside Outfeed via C35 (Normally Open)
-    'SeasideOutFeed': [
-      TrackConnection(neighbor: 'LandsideOutFeed', switchName: 'C35'),
-      TrackConnection(neighbor: 'C32R53to59', switchName: 'C10'),
-    ],
-    
-    // Landside Outfeed (Aqua) has 4 parallel redundant feeds!
-    'LandsideOutFeed': [
-      TrackConnection(neighbor: 'SeasideOutFeed', switchName: 'C35'),
-      TrackConnection(neighbor: 'C22R1to7', switchName: 'C15'),
-      TrackConnection(neighbor: 'C21R8to15', switchName: 'C14'),
-      TrackConnection(neighbor: 'C20R16to23', switchName: 'C13'),
-      TrackConnection(neighbor: 'C19R24to31', switchName: 'C12'),
-    ],
-
-    // Individual bus sections separated by series switches
-    'C32R53to59': [
-      TrackConnection(neighbor: 'SeasideOutFeed', switchName: 'C10'),
-      TrackConnection(neighbor: 'C16R46to52', switchName: 'C32'),
-    ],
-    'C16R46to52': [
-      TrackConnection(neighbor: 'C32R53to59', switchName: 'C32'),
-      TrackConnection(neighbor: 'C17R40to45', switchName: 'C16'),
-    ],
-    'C17R40to45': [
-      TrackConnection(neighbor: 'C16R46to52', switchName: 'C16'),
-      TrackConnection(neighbor: 'C18R32to39', switchName: 'C17'),
-    ],
-    'C18R32to39': [
-      TrackConnection(neighbor: 'C17R40to45', switchName: 'C17'),
-      TrackConnection(neighbor: 'C19R24to31', switchName: 'C18'),
-    ],
-    'C19R24to31': [
-      TrackConnection(neighbor: 'C18R32to39', switchName: 'C18'),
-      TrackConnection(neighbor: 'C20R16to23', switchName: 'C19'),
-      TrackConnection(neighbor: 'LandsideOutFeed', switchName: 'C12'), // Redundant path to Aqua
-    ],
-    'C20R16to23': [
-      TrackConnection(neighbor: 'C19R24to31', switchName: 'C19'),
-      TrackConnection(neighbor: 'C21R8to15', switchName: 'C20'),
-      TrackConnection(neighbor: 'LandsideOutFeed', switchName: 'C13'), // Redundant path to Aqua
-    ],
-    'C21R8to15': [
-      TrackConnection(neighbor: 'C20R16to23', switchName: 'C20'),
-      TrackConnection(neighbor: 'C22R1to7', switchName: 'C21'),
-      TrackConnection(neighbor: 'LandsideOutFeed', switchName: 'C14'), // Redundant path to Aqua
-    ],
-    'C22R1to7': [
-      TrackConnection(neighbor: 'C21R8to15', switchName: 'C21'),
-      TrackConnection(neighbor: 'LandsideOutFeed', switchName: 'C15'), // Redundant path to Aqua
-    ],
-  };
-
+  // 1. Load the JSON data and SVG asset
   Future<void> initializeYardData() async {
     try {
       final String jsonString = await rootBundle.loadString('assets/kgx_switch-coords.json');
@@ -92,107 +18,104 @@ class YardController {
         (key, value) => MapEntry(key, List<double>.from(value))
       ));
       
+      // Keep using .svg since that's your actual working project asset format
       rawSvgTemplate = await rootBundle.loadString('assets/kgx_yard_map.svg');
       
-      initializeDefaultStates();
+      initializeTrackDefaultStates();
     } catch (e) {
       print("Error loading yard data: $e");
     }
   }
 
-  void initializeDefaultStates() {
-    // Define all switch names
-    List<String> switches = [
-      'C32', 'C16', 'C17', 'C18', 'C19', 'C20', 'C21', 'C22',
-      'C25', 'T31', 'C24', 'C23', 'C10', 'C15', 'C12', 'C13', 'C14',
-      'C35' // Emergency Bypass Switch
+  // 2. Set up your default track layout states
+  void initializeTrackDefaultStates() {
+    List<String> trackGroups = [
+      'SeasideOutFeed',
+      'LandsideInFeeder1',
+      'LandsideInFeeder2',
+      'SeasideInFeeder1',
+      'SeasideInFeeder2',
+      'LandsideOutFeed',
+      'C32R53to59',
+      'C16R46to52',
+      'C17R40to45',
+      'C18R32to39',
+      'C19R24to31',
+      'C20R16to23',
+      'C21R8to15',
+      'C22R1to7'
     ];
 
-    for (var sw in switches) {
-      if (sw == 'C35') {
-        switchStates[sw] = false; // "Normally Open" (Emergency only)
-      } else {
-        switchStates[sw] = true;  // "Normally Closed" (Energized defaults)
-      }
-    }
-
-    // Run the initial connectivity check
-    recalculateTrackEnergization();
-  }
-
-  /// Traverses the entire electrical graph starting from power feeds.
-  /// Any section connected to a source via closed switches stays energized.
-  void recalculateTrackEnergization() {
-    // Set all track sections to unenergized by default
-    networkGraph.keys.forEach((trackId) {
-      trackStates[trackId] = false;
-    });
-    for (var source in powerSources) {
-      trackStates[source] = true; 
-    }
-
-    // Queue for Breadth-First Search (BFS)
-    List<String> queue = [];
-    Set<String> visited = {};
-
-    // Seed our search with active power source sections
-    for (var source in powerSources) {
-      queue.add(source);
-      visited.add(source);
-    }
-
-    while (queue.isNotEmpty) {
-      String current = queue.removeAt(0);
-      trackStates[current] = true; // This track is verified ENERGIZED
-
-      // Check all neighbors linked to this segment
-      List<TrackConnection>? connections = networkGraph[current];
-      if (connections != null) {
-        for (var conn in connections) {
-          // If the switch bridging these two tracks is CLOSED (active/true)
-          bool switchIsClosed = switchStates[conn.switchName] ?? false;
-
-          if (switchIsClosed && !visited.contains(conn.neighbor)) {
-            visited.add(conn.neighbor);
-            queue.add(conn.neighbor);
-          }
-        }
-      }
+    for (var groupId in trackGroups) {
+      trackStates[groupId] = true; // Default to fully energized (colored)
     }
   }
 
+  // 3. Maps each clickable switch name directly to its corresponding SVG track group
+  final Map<String, String> switchMap = {
+    'C32' : 'C32R53to59',
+    'C16' : 'C16R46to52',
+    'C17' : 'C17R40to45',
+    'C18' : 'C18R32to39',
+    'C19' : 'C19R24to31',
+    'C20' : 'C20R16to23',
+    'C21' : 'C21R8to15',
+    'C22' : 'C22R1to7',
+    'C25' : 'LandsideInFeeder2', 
+    'T31' : 'SeasideInFeeder1', 
+    'C24' : 'SeasideInFeeder2', 
+    'C23' : 'LandsideInFeeder1', 
+    'C10' : 'SeasideOutFeed', 
+    'C15' : 'LandsideOutFeed' 
+  };
+
+  // 4. Logic to toggle states when a switch is flipped
   void toggleSwitch(String switchName) {
-    if (switchStates.containsKey(switchName)) {
-      switchStates[switchName] = !switchStates[switchName]!;
-      
-      // Every time a switch position flips, recalculate electrical flow!
-      recalculateTrackEnergization();
-      print("Switch $switchName toggled. State is now: ${switchStates[switchName]}");
+    final String? targetGroup = switchMap[switchName];
+
+    if (targetGroup != null && trackStates.containsKey(targetGroup)) {
+      trackStates[targetGroup] = !trackStates[targetGroup]!;
+      print("Switch $switchName flipped! Toggled track group: $targetGroup");
+    } else {
+      print("Switch $switchName flipped, but no track group is assigned to it yet.");
     }
   }
 
-  /// Strips color to #444444 inside any track groups that lost connection to power sources
+  /// Modifies only the stroke and fill colors belonging to non-energized track groups
   String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) return '';
 
     String workingCopy = rawSvgTemplate;
-    final RegExp hexStrokeRegex = RegExp(r'stroke="#[0-9a-fA-F]{6}"');
-    final RegExp hexFillRegex = RegExp(r'fill="#[0-9a-fA-F]{6}"');
 
     trackStates.forEach((groupId, isEnergized) {
       if (!isEnergized) {
-        final String searchString = '<g id="$groupId">';
+        // Find where this specific track group block starts (checking both with and without leading underscore)
+        String searchString = '<g id="_$groupId">';
         int groupStartIndex = workingCopy.indexOf(searchString);
         
+        if (groupStartIndex == -1) {
+          searchString = '<g id="$groupId">';
+          groupStartIndex = workingCopy.indexOf(searchString);
+        }
+        
         if (groupStartIndex != -1) {
+          // Find where this group block ends
           int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
+          
           if (groupEndIndex != -1) {
+            // Extract just the inner path content for this track segment
             String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
             
-            groupContent = groupContent
-                .replaceAll(hexStrokeRegex, 'stroke="#444444"')
-                .replaceAll(hexFillRegex, 'fill="#444444"');
+            // Target your newly standardized hex values instead of word colors
+            // 1. Target Blue (#0000ff)
+            groupContent = groupContent.replaceAll('stroke="#0000ff"', 'stroke="#444444"');
+            groupContent = groupContent.replaceAll('fill="#0000ff"', 'fill="#444444"'); 
             
+            // 2. Target Aqua (#00ffff)
+            groupContent = groupContent.replaceAll('stroke="#00ffff"', 'stroke="#444444"');
+            groupContent = groupContent.replaceAll('fill="#00ffff"', 'fill="#444444"'); 
+            
+            // Re-stitch the modified group text back into the master string layout
             workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
           }
         }

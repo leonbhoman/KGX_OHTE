@@ -3,20 +3,18 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'yard_controller.dart';
 
 void main() {
-  runApp(const KgxOhteApp());
+  runApp(const MyApp());
 }
 
-class KgxOhteApp extends StatelessWidget {
-  const KgxOhteApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'KGX OHTE Interactive Diagram',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF111111), // Match your dark SVG background
-      ),
+      title: 'KGX Yard Map',
+      theme: ThemeData.dark(),
       home: const YardMapScreen(),
     );
   }
@@ -31,71 +29,32 @@ class YardMapScreen extends StatefulWidget {
 
 class _YardMapScreenState extends State<YardMapScreen> {
   final YardController _controller = YardController();
-  late Future<void> _initFuture;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _initFuture = _controller.initializeYardData();
+    _setupController();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Kingsrest Marshalling Yard - OHTE Isolation Map'),
-        elevation: 2,
-      ),
-      body: FutureBuilder<void>(
-        future: _initFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error loading layout: ${snapshot.error}'));
-          }
-
-          return SizedBox.expand(
-            child: InteractiveViewer(
-              minScale: 0.2,
-              maxScale: 5.0,
-              constrained: false, // Keeps your map reading horizontally layout-wide
-              boundaryMargin: const EdgeInsets.all(500),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Stack(
-                  children: [
-                    // Layer 1: Base SVG map
-                    SvgPicture.string(
-                      _controller.buildDynamicSvgCode(),
-                      width: 1605.08,
-                      height: 1111.32,
-                      fit: BoxFit.none,
-                      alignment: Alignment.topLeft,
-                    ),
-                    // Layer 2: Clickable switch overlays
-                    ..._buildSwitchNodes(),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
+  Future<void> _setupController() async {
+    await _controller.initializeYardData();
+    setState(() {
+      _isLoading = false;
+    });
   }
 
-  // This defines the missing method cleanly within the state class bounds
   List<Widget> _buildSwitchNodes() {
     final List<Widget> nodes = [];
 
     _controller.switchCoordinates.forEach((switchName, coords) {
       if (coords.length < 2) return;
-      final double x = (coords[0] as num).toDouble();
-      final double y = (coords[1] as num).toDouble();
+      final double x = coords[0];
+      final double y = coords[1];
 
-// Retrieve the current state of this switch (defaulting to false if unknown)
-      bool isSwitchClosed = _controller.switchStates[switchName] ?? false;
+      // Retrieve state of target track group linked to this switch
+      final String? targetGroup = _controller.switchMap[switchName];
+      final bool isSwitchClosed = _controller.trackStates[targetGroup] ?? false;
 
       nodes.add(
         Positioned(
@@ -111,15 +70,13 @@ class _YardMapScreenState extends State<YardMapScreen> {
                 });
               },
               child: Tooltip(
-                message: 'Switch $switchName (${isSwitchClosed ? "Closed / ON" : "Open / OFF"})',
+                message: 'Switch $switchName',
                 child: Container(
                   width: 24,  
                   height: 24,
                   decoration: BoxDecoration(
-                    // Solid dark background
                     color: const Color(0xFF222222), 
                     shape: BoxShape.circle,
-                    // BORDER turns Green when Closed (ON), and Red when Open (OFF)
                     border: Border.all(
                       color: isSwitchClosed ? Colors.greenAccent : Colors.redAccent, 
                       width: 2.5
@@ -131,7 +88,6 @@ class _YardMapScreenState extends State<YardMapScreen> {
                       style: TextStyle(
                         fontSize: 8, 
                         fontWeight: FontWeight.bold, 
-                        // Text changes color to match the border status
                         color: isSwitchClosed ? Colors.greenAccent : Colors.redAccent,
                       )
                     ),
@@ -141,8 +97,60 @@ class _YardMapScreenState extends State<YardMapScreen> {
             ),
           ),
         ),
-      );    });
+      );
+    });
 
     return nodes;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Regenerate the updated SVG code based on switch positions
+    final String svgString = _controller.buildDynamicSvgCode();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF111111),
+      appBar: AppBar(
+        title: const Text('KGX Yard OHTE Control Simulator'),
+        backgroundColor: const Color(0xFF1E1E1E),
+      ),
+      body: InteractiveViewer(
+        maxScale: 5.0,
+        minScale: 0.5,
+        child: Center(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: Container(
+                width: 1605, // Hardcoded to match SVG viewBox width
+                height: 1111, // Hardcoded to match SVG viewBox height
+                color: Colors.black,
+                child: Stack(
+                  children: [
+                    // Render the dynamically updated SVG string
+                    if (svgString.isNotEmpty)
+                      SvgPicture.string(
+                        svgString,
+                        width: 1605,
+                        height: 1111,
+                      ),
+                    
+                    // Render interactive overlay switches
+                    ..._buildSwitchNodes(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

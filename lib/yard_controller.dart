@@ -74,6 +74,37 @@ class YardController {
     }
   }
 
+  /// Returns the friendly track description associated with a switch name
+  String getTrackDescriptionForSwitch(String switchName) {
+    // Find the definition matching this switch
+    final definition = switchDefinitions.firstWhere(
+      (d) => d.name == switchName,
+      orElse: () => const SwitchDefinition(name: '', trackGroupId: ''),
+    );
+
+    if (definition.name.isEmpty) return '';
+
+    // Description mapping matching our SVG groups
+    final Map<String, String> trackDescriptions = {
+      'C32R53to59': 'Roads 53 to 59',
+      'C16R46to52': 'Roads 46 to 52',
+      'C17R40to45': 'Roads 40 to 45',
+      'C18R32to39': 'Roads 32 to 39',
+      'C19R24to31': 'Roads 24 to 31',
+      'C20R16to23': 'Roads 16 to 23',
+      'C21R8to15': 'Roads 8 to 15',
+      'C22R1to7': 'Roads 1 to 7',
+      'LandsideInFeeder1': 'Landside Input Feeder 1',
+      'LandsideInFeeder2': 'Landside Input Feeder 2',
+      'SeasideInFeeder1': 'Seaside Input Feeder 1',
+      'SeasideInFeeder2': 'Seaside Input Feeder 2',
+      'LandsideOutFeed': 'Landside Output Feed',
+      'SeasideOutFeed': 'Seaside Output Feed',
+    };
+
+    return trackDescriptions[definition.trackGroupId] ?? '';
+  }
+
  /// Generates the SVG code by evaluating our control logic rules 
   /// and replacing colors in the de-energized track blocks.
   String buildDynamicSvgCode() {

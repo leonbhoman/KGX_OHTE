@@ -119,33 +119,29 @@ class _YardMapScreenState extends State<YardMapScreen> {
         title: const Text('KGX Yard OHTE Control Simulator'),
         backgroundColor: const Color(0xFF1E1E1E),
       ),
-      body: InteractiveViewer(
-        maxScale: 5.0,
-        minScale: 0.5,
-        child: Center(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: Container(
-                width: 1605, // Hardcoded to match SVG viewBox width
-                height: 1111, // Hardcoded to match SVG viewBox height
-                color: Colors.black,
-                child: Stack(
-                  children: [
-                    // Render the dynamically updated SVG string
-                    if (svgString.isNotEmpty)
-                      SvgPicture.string(
-                        svgString,
-                        width: 1605,
-                        height: 1111,
-                      ),
-                    
-                    // Render interactive overlay switches
-                    ..._buildSwitchNodes(),
-                  ],
-                ),
-              ),
+      body: Center(
+        child: InteractiveViewer(
+          maxScale: 5.0,
+          minScale: 0.2, // Allows zooming out further to see the whole yard
+          constrained: false, // CRITICAL: Tells Flutter this is an unconstrained 2D canvas
+          boundaryMargin: const EdgeInsets.all(200), // Gives comfortable panning space past the edges
+          child: Container(
+            width: 1605, // Hardcoded to match SVG viewBox width
+            height: 1111, // Hardcoded to match SVG viewBox height
+            color: Colors.black,
+            child: Stack(
+              children: [
+                // Render the dynamically updated SVG string
+                if (svgString.isNotEmpty)
+                  SvgPicture.string(
+                    svgString,
+                    width: 1605,
+                    height: 1111,
+                  ),
+                
+                // Render interactive overlay switches
+                ..._buildSwitchNodes(),
+              ],
             ),
           ),
         ),

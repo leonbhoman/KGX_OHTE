@@ -105,15 +105,15 @@ List<Widget> _buildSwitchNodes() {
     // Defines the precise vertical bounds (Top coordinate, Height) and labels 
     // for the 9 distinct track blocks in the center of your SVG canvas.
     final List<Map<String, dynamic>> zones = [
-      {'left': 600.0, 'top': 35.0, 'height': 40.0,   'label': 'Roads 53 to 59'}, // Blue block at the top
-      {'left': 550.0, 'top': 120.0, 'height': 50.0, 'label': 'Roads 46 to 52'}, // Red upper block
-      {'left': 550.0, 'top': 180.0, 'height': 40.0,  'label': 'Roads 40 to 45'}, // Brown block
-      {'left': 550.0, 'top': 250.0, 'height': 120.0, 'label': 'Roads 32 to 39'}, // Green upper block
-      {'left': 550.0, 'top': 400.0, 'height': 105.0, 'label': 'Roads 24 to 31'}, // Red lower block
-      {'left': 550.0, 'top': 500.0, 'height': 75.0,  'label': 'Roads 16 to 23'}, // Dark Yellow block
+      {'left': 600.0, 'top': 35.0, 'height': 40.0,   'label': 'Roads 53 to 59'}, // Blue
+      {'left': 530.0, 'top': 130.0, 'height': 60.0, 'label': 'Roads 46 to 52'}, // Red
+      {'left': 520.0, 'top': 200.0, 'height': 45.0,  'label': 'Roads 40 to 45'}, // Brown
+      {'left': 510.0, 'top': 250.0, 'height': 120.0, 'label': 'Roads 32 to 39'}, // Green
+      {'left': 550.0, 'top': 400.0, 'height': 105.0, 'label': 'Roads 24 to 31'}, // Red
+      {'left': 550.0, 'top': 500.0, 'height': 75.0,  'label': 'Roads 16 to 23'}, // Yellow
       {'left': 550.0, 'top': 600.0, 'height': 65.0,  'label': 'Roads 8 to 15'},  // Light Yellow block
-      {'left': 550.0, 'top': 700.0, 'height': 85.0,  'label': 'Roads 1 to 7'},   // Green bottom block
-      {'left': 550.0, 'top': 800.0, 'height': 90.0, 'label': 'Roads 1 to 7 (Lower)'}, // Red bottom block
+      {'left': 550.0, 'top': 700.0, 'height': 85.0,  'label': 'Roads 1 to 7'},   // Green
+      {'left': 550.0, 'top': 800.0, 'height': 90.0, 'label': 'Roads 1 to 7 (Lower)'}, // Red
     ];
 
     return zones.map((zone) {

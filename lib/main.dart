@@ -126,15 +126,7 @@ List<Widget> _buildSwitchNodes() {
           waitDuration: const Duration(milliseconds: 200),
           child: MouseRegion(
             cursor: SystemMouseCursors.help,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.2), // Translucent green fill
-                border: Border.all(
-                  color: Colors.greenAccent, 
-                  width: 2.0, // Bright green outline
-                ),
-              ),
-            ),
+            child: SizedBox.expand(), // This completely hides the green box while keeping hover fully active!,
           ),
         ),
       );

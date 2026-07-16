@@ -110,9 +110,9 @@ List<Widget> _buildSwitchNodes() {
       {'left': 520.0, 'width': 180, 'top': 190.0, 'height': 45.0,  'label': 'Roads 40 to 45'}, // Brown
       {'left': 510.0, 'width': 180, 'top': 250.0, 'height': 65.0, 'label': 'Roads 32 to 39'}, // Green
       {'left': 520.0, 'width': 180, 'top': 325.0, 'height': 65.0, 'label': 'Roads 24 to 31'}, // Red
-      {'left': 545.0, 'width': 150, 'top': 400.0, 'height': 110.0,  'label': 'Roads 16 to 23'}, // Yellow
-      {'left': 550.0, 'width': 150, 'top': 560.0, 'height': 65.0,  'label': 'Roads 8 to 15'},  // Green
-      {'left': 550.0, 'width': 150, 'top': 700.0, 'height': 85.0,  'label': 'Roads 1 to 7'},   // Red
+      {'left': 540.0, 'width': 150, 'top': 400.0, 'height': 120.0,  'label': 'Roads 16 to 23'}, // Yellow
+      {'left': 540.0, 'width': 150, 'top': 530.0, 'height': 65.0,  'label': 'Roads 8 to 15'},  // Green
+      {'left': 540.0, 'width': 160, 'top': 600.0, 'height': 85.0,  'label': 'Roads 1 to 7'},   // Red
       ];
 
     return zones.map((zone) {

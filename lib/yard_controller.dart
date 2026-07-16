@@ -81,38 +81,32 @@ class YardController {
 
     String workingCopy = rawSvgTemplate;
 
-    // --- STEP 1: PROPAGATE POWER THROUGH THE SWITCHES ---
-    // We create a map of which switches actually have incoming power to pass on.
+// --- STEP 1: PROPAGATE POWER THROUGH THE SWITCHES ---
     final Map<String, bool> switchHasPower = {};
 
     // Helper: Checks if a switch is physically closed (true)
     bool isClosed(String name) => switchStates[name] ?? true;
 
-    // A. Define Seaside Power Flow (fed from C24)
+    // A. Seaside Power Flow (fed from C24)
     final bool hasPowerC24 = isClosed('C24'); 
     final bool hasPowerC16 = hasPowerC24 && isClosed('C16');
     final bool hasPowerC32 = hasPowerC16 && isClosed('C32');
-    final bool hasPowerC17 = hasPowerC16 && isClosed('C17'); // Note: C16 feeds BOTH C32 and C17 in your tree.
-    
-    // C10 is fed if EITHER (C24 is closed AND C17 is closed) OR (C24 is closed and C10 is closed directly)
-    // Based on C24 => [..., C10] and C17 => [C10]
+    final bool hasPowerC17 = hasPowerC16 && isClosed('C17');
     final bool hasPowerC10 = hasPowerC24 && hasPowerC17 && isClosed('C10');
 
-    // B. Define Landside Power Flow (fed from C25)
+    // B. Landside Power Flow (fed in PARALLEL from C25)
     final bool hasPowerC25 = isClosed('C25');
     final bool hasPowerC18 = hasPowerC25 && isClosed('C18');
-    final bool hasPowerC19 = hasPowerC18 && isClosed('C19');
-    final bool hasPowerC20 = hasPowerC19 && isClosed('C20');
-    final bool hasPowerC21 = hasPowerC20 && isClosed('C21');
-    final bool hasPowerC22 = hasPowerC21 && isClosed('C22');
+    final bool hasPowerC19 = hasPowerC25 && isClosed('C19');
+    final bool hasPowerC20 = hasPowerC25 && isClosed('C20');
+    final bool hasPowerC21 = hasPowerC25 && isClosed('C21');
+    final bool hasPowerC22 = hasPowerC25 && isClosed('C22');
 
-    // C. Define Feeders to the Landside Outfeed (C12, C13, C14, C15)
-    // Based on your rules, these are fed down the main trunk C25 -> C22,
-    // but also have individual parent gating switches (e.g. C19 => [C12], C20 => [C13], etc.)
-    final bool hasPowerC12 = hasPowerC22 && hasPowerC19 && isClosed('C12');
-    final bool hasPowerC13 = hasPowerC22 && hasPowerC20 && isClosed('C13');
-    final bool hasPowerC14 = hasPowerC22 && hasPowerC21 && isClosed('C14');
-    final bool hasPowerC15 = hasPowerC22 && hasPowerC22 && isClosed('C15'); // C22 feeds C15
+    // C. Individual Outfeed lines (Each fed by its parent switch)
+    final bool hasPowerC12 = hasPowerC19 && isClosed('C12');
+    final bool hasPowerC13 = hasPowerC20 && isClosed('C13');
+    final bool hasPowerC14 = hasPowerC21 && isClosed('C14');
+    final bool hasPowerC15 = hasPowerC22 && isClosed('C15');
 
     // Store computed switch power states
     switchHasPower['C24'] = hasPowerC24;
@@ -137,7 +131,7 @@ class YardController {
     // --- STEP 2: CALCULATE THE ENERGIZED STATE OF EACH TRACK GROUP ---
     final Map<String, bool> computedTrackStates = {};
 
-    // Default tracks: A track segment is only energized if its feeding switch is physically closed AND has power.
+    // Default tracks: A track segment is only energized if its feeding switch has active power flow.
     for (var definition in switchDefinitions) {
       if (definition.trackGroupId == 'LandsideOutFeed' || 
           definition.trackGroupId == 'SeasideOutFeed' ||
@@ -145,12 +139,11 @@ class YardController {
         continue;
       }
       
-      // Look up if the switch associated with this track segment actually has power flowing through it
       computedTrackStates[definition.trackGroupId] = switchHasPower[definition.name] ?? isClosed(definition.name);
     }
 
     // Evaluate the Base Outfeed States (before C35 bridging is applied)
-    // LandsideOutFeed is energized if ANY of its feeding switches (C12, C13, C14, C15) has active power flow
+    // LandsideOutFeed is energized if ANY of its feeding branches actually carry power
     bool landsideBaseEnergized = hasPowerC12 || hasPowerC13 || hasPowerC14 || hasPowerC15;
 
     // SeasideOutFeed is energized if C10 has active power flow
@@ -161,8 +154,6 @@ class YardController {
     bool finalSeasideOutState = seasideBaseEnergized;
 
     if (isClosed('C35')) {
-      // If C35 is CLOSED, power bridges across. 
-      // This means if EITHER side has active power, BOTH outfeeds become energized!
       if (landsideBaseEnergized || seasideBaseEnergized) {
         finalLandsideOutState = true;
         finalSeasideOutState = true;
@@ -174,18 +165,44 @@ class YardController {
     computedTrackStates['SeasideOutFeed'] = finalSeasideOutState;
 
 
-    // --- STEP 3: APPLY SWAP COLOR REPLACEMENTS ON DE-ENERGIZED TRACKS ---
+// --- STEP 3: APPLY COLOR REPLACEMENTS AND HOVER TOOLTIPS ---
+    // Mapping of group IDs to friendly descriptive text
+    final Map<String, String> trackDescriptions = {
+      'C32R53to59': 'Roads 53 to 59',
+      'C16R46to52': 'Roads 46 to 52',
+      'C17R40to45': 'Roads 40 to 45',
+      'C18R32to39': 'Roads 32 to 39',
+      'C19R24to31': 'Roads 24 to 31',
+      'C20R16to23': 'Roads 16 to 23',
+      'C21R8to15': 'Roads 8 to 15',
+      'C22R1to7': 'Roads 1 to 7',
+      'LandsideInFeeder1': 'Landside Input Feeder 1',
+      'LandsideInFeeder2': 'Landside Input Feeder 2',
+      'SeasideInFeeder1': 'Seaside Input Feeder 1',
+      'SeasideInFeeder2': 'Seaside Input Feeder 2',
+      'LandsideOutFeed': 'Landside Output Feed',
+      'SeasideOutFeed': 'Seaside Output Feed',
+    };
+
     computedTrackStates.forEach((trackGroupId, isEnergized) {
-      if (!isEnergized) {
-        final String searchString = '<g id="$trackGroupId">';
-        final int groupStartIndex = workingCopy.indexOf(searchString);
+      final String searchString = '<g id="$trackGroupId">';
+      final int groupStartIndex = workingCopy.indexOf(searchString);
+      
+      if (groupStartIndex != -1) {
+        final int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
         
-        if (groupStartIndex != -1) {
-          final int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
+        if (groupEndIndex != -1) {
+          String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
           
-          if (groupEndIndex != -1) {
-            String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
-            
+          // 1. Inject SVG Hover Tooltip (Title tag) if a description exists
+          if (trackDescriptions.containsKey(trackGroupId)) {
+            final String tooltipXml = '<title>${trackDescriptions[trackGroupId]}</title>';
+            // Inject cleanly right after the opening group tag
+            groupContent = groupContent.replaceFirst('>', '>\n$tooltipXml');
+          }
+
+          // 2. Turn de-energized tracks gray
+          if (!isEnergized) {
             final List<String> targetColors = [
               '#0000ff', // Blue
               '#00ffff', // Aqua
@@ -200,9 +217,9 @@ class YardController {
               groupContent = groupContent.replaceAll('stroke="$color"', 'stroke="#444444"');
               groupContent = groupContent.replaceAll('fill="$color"', 'fill="#444444"');
             }
-            
-            workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
           }
+          
+          workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
         }
       }
     });

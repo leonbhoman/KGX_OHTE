@@ -60710,7 +60710,7 @@ Ri(){var s=A.c([],t.af)
 this.d.b.a3(0,new A.a9Q(this,s))
 return s},
 Rh(){var s=t.N,r=t.z,q=t.wO
-s=A.X(new A.ae(A.c([A.aC(["top",40,"height",40,"label","Roads 53 to 59"],s,r),A.aC(["top",100,"height",40,"label","Roads 46 to 52"],s,r),A.aC(["top",410,"height",40,"label","Roads 40 to 45"],s,r),A.aC(["top",250,"height",120,"label","Roads 32 to 39"],s,r),A.aC(["top",635,"height",105,"label","Roads 24 to 31"],s,r),A.aC(["top",755,"height",75,"label","Roads 16 to 23"],s,r),A.aC(["top",840,"height",65,"label","Roads 8 to 15"],s,r),A.aC(["top",915,"height",85,"label","Roads 1 to 7"],s,r),A.aC(["top",1010,"height",90,"label","Roads 1 to 7 (Lower)"],s,r)],t.gG),new A.a9N(),q),q.h("aq.E"))
+s=A.X(new A.ae(A.c([A.aC(["top",35,"height",40,"label","Roads 53 to 59"],s,r),A.aC(["top",120,"height",50,"label","Roads 46 to 52"],s,r),A.aC(["top",180,"height",40,"label","Roads 40 to 45"],s,r),A.aC(["top",250,"height",120,"label","Roads 32 to 39"],s,r),A.aC(["top",635,"height",105,"label","Roads 24 to 31"],s,r),A.aC(["top",755,"height",75,"label","Roads 16 to 23"],s,r),A.aC(["top",840,"height",65,"label","Roads 8 to 15"],s,r),A.aC(["top",915,"height",85,"label","Roads 1 to 7"],s,r),A.aC(["top",1010,"height",90,"label","Roads 1 to 7 (Lower)"],s,r)],t.gG),new A.a9N(),q),q.h("aq.E"))
 return s},
 P(a){var s,r,q=this,p=null
 if(q.e)return B.Ke
@@ -60750,7 +60750,7 @@ A.abk("Switch "+r+" toggled to: "+q)}},
 $S:0}
 A.a9N.prototype={
 $1(a){var s=null,r=a.j(0,"top"),q=a.j(0,"height"),p=a.j(0,"label")
-return A.acV(s,A.adn(A.uG(A.QK(s,s,new A.fi(A.bh(51,B.i1.H()>>>16&255,B.i1.H()>>>8&255,B.i1.H()&255),s,A.afk(B.i0,2),s,s,s,B.bm),s,s,s,s),B.MR,s,s),p,B.ay),q,s,500,s,r,320)},
+return A.acV(s,A.adn(A.uG(A.QK(s,s,new A.fi(A.bh(51,B.i1.H()>>>16&255,B.i1.H()>>>8&255,B.i1.H()&255),s,A.afk(B.i0,2),s,s,s,B.bm),s,s,s,s),B.MR,s,s),p,B.ay),q,s,500,s,r,150)},
 $S:385}
 A.cQ.prototype={}
 A.a4e.prototype={

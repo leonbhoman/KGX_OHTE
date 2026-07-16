@@ -44,7 +44,7 @@ class _YardMapScreenState extends State<YardMapScreen> {
     });
   }
 
-  List<Widget> _buildSwitchNodes() {
+List<Widget> _buildSwitchNodes() {
     final List<Widget> nodes = [];
 
     _controller.switchCoordinates.forEach((switchName, coords) {
@@ -52,7 +52,6 @@ class _YardMapScreenState extends State<YardMapScreen> {
       final double x = coords[0];
       final double y = coords[1];
 
-      // Retrieve state of the switch directly from our states map
       final bool isSwitchClosed = _controller.switchStates[switchName] ?? true;
 
       nodes.add(
@@ -102,6 +101,39 @@ class _YardMapScreenState extends State<YardMapScreen> {
     return nodes;
   }
 
+  List<Widget> _buildRoadHoverZones() {
+    // Defines the precise vertical bounds (Top coordinate, Height) and labels 
+    // for the 9 distinct track blocks in the center of your SVG canvas.
+    final List<Map<String, dynamic>> zones = [
+      {'top': 110.0, 'height': 85.0,  'label': 'Roads 53 to 59'}, // Blue block at the top
+      {'top': 250.0, 'height': 150.0, 'label': 'Roads 46 to 52'}, // Red upper block
+      {'top': 410.0, 'height': 85.0,  'label': 'Roads 40 to 45'}, // Brown block
+      {'top': 505.0, 'height': 120.0, 'label': 'Roads 32 to 39'}, // Green upper block
+      {'top': 635.0, 'height': 105.0, 'label': 'Roads 24 to 31'}, // Red lower block
+      {'top': 755.0, 'height': 75.0,  'label': 'Roads 16 to 23'}, // Dark Yellow block
+      {'top': 840.0, 'height': 65.0,  'label': 'Roads 8 to 15'},  // Light Yellow block
+      {'top': 915.0, 'height': 85.0,  'label': 'Roads 1 to 7'},   // Green bottom block
+      {'top': 1010.0, 'height': 90.0, 'label': 'Roads 1 to 7 (Lower)'}, // Red bottom block
+    ];
+
+    return zones.map((zone) {
+      return Positioned(
+        left: 700,         // Anchors right in the middle of the map (green box area)
+        width: 320,        // Generous width for easy hovering
+        top: zone['top'],
+        height: zone['height'],
+        child: Tooltip(
+          message: zone['label'],
+          waitDuration: const Duration(milliseconds: 200), // Spits out the tip quickly
+          child: const MouseRegion(
+            cursor: SystemMouseCursors.help,
+            child: SizedBox.expand(), // Keeps it completely invisible but hover-sensitive
+          ),
+        ),
+      );
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -130,19 +162,22 @@ class _YardMapScreenState extends State<YardMapScreen> {
             height: 1111, // Hardcoded to match SVG viewBox height
             color: Colors.black,
             child: Stack(
-              children: [
-                // Render the dynamically updated SVG string
-                if (svgString.isNotEmpty)
-                  SvgPicture.string(
-                    svgString,
-                    width: 1605,
-                    height: 1111,
-                  ),
-                
-                // Render interactive overlay switches
-                ..._buildSwitchNodes(),
-              ],
-            ),
+                  children: [
+                    // Render the dynamically updated SVG string
+                    if (svgString.isNotEmpty)
+                      SvgPicture.string(
+                        svgString,
+                        width: 1605,
+                        height: 1111,
+                      ),
+                    
+                    // 1. Invisible Road Hover Zones (Placed below switches so they don't block clicks)
+                    ..._buildRoadHoverZones(),
+
+                    // 2. Render interactive overlay switches
+                    ..._buildSwitchNodes(),
+                  ],
+                ),
           ),
         ),
       ),

@@ -111,7 +111,7 @@ List<Widget> _buildSwitchNodes() {
       {'left': 510.0, 'width': 180, 'top': 250.0, 'height': 65.0, 'label': 'Roads 32 to 39'}, // Green
       {'left': 520.0, 'width': 180, 'top': 325.0, 'height': 65.0, 'label': 'Roads 24 to 31'}, // Red
       {'left': 540.0, 'width': 150, 'top': 400.0, 'height': 120.0,  'label': 'Roads 16 to 23'}, // Yellow
-      {'left': 570.0, 'width': 130, 'top': 530.0, 'height': 65.0,  'label': 'Roads 8 to 15'},  // Green
+      {'left': 575.0, 'width': 125, 'top': 530.0, 'height': 65.0,  'label': 'Roads 8 to 15'},  // Green
       {'left': 540.0, 'width': 160, 'top': 600.0, 'height': 85.0,  'label': 'Roads 1 to 7'},   // Red
       ];
 

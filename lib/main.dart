@@ -124,10 +124,18 @@ List<Widget> _buildSwitchNodes() {
         height: zone['height'],
         child: Tooltip(
           message: zone['label'],
-          waitDuration: const Duration(milliseconds: 200), // Spits out the tip quickly
-          child: const MouseRegion(
+          waitDuration: const Duration(milliseconds: 200),
+          child: MouseRegion(
             cursor: SystemMouseCursors.help,
-            child: SizedBox.expand(), // Keeps it completely invisible but hover-sensitive
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.2), // Translucent green fill
+                border: Border.all(
+                  color: Colors.greenAccent, 
+                  width: 2.0, // Bright green outline
+                ),
+              ),
+            ),
           ),
         ),
       );

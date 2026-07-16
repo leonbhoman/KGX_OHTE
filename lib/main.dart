@@ -105,7 +105,7 @@ List<Widget> _buildSwitchNodes() {
     // Defines the precise vertical bounds (Top coordinate, Height) and labels 
     // for the 9 distinct track blocks in the center of your SVG canvas.
     final List<Map<String, dynamic>> zones = [
-      {'top': 110.0, 'height': 85.0,  'label': 'Roads 53 to 59'}, // Blue block at the top
+      {'top': 80.0, 'height': 60.0,  'label': 'Roads 53 to 59'}, // Blue block at the top
       {'top': 250.0, 'height': 150.0, 'label': 'Roads 46 to 52'}, // Red upper block
       {'top': 410.0, 'height': 85.0,  'label': 'Roads 40 to 45'}, // Brown block
       {'top': 505.0, 'height': 120.0, 'label': 'Roads 32 to 39'}, // Green upper block
@@ -118,7 +118,7 @@ List<Widget> _buildSwitchNodes() {
 
     return zones.map((zone) {
       return Positioned(
-        left: 700,         // Anchors right in the middle of the map (green box area)
+        left: 500,         // Anchors right in the middle of the map (green box area)
         width: 320,        // Generous width for easy hovering
         top: zone['top'],
         height: zone['height'],

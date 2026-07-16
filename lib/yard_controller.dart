@@ -74,68 +74,107 @@ class YardController {
     }
   }
 
-  // Generates SVG code with dynamic CSS overrides to turn open-switch tracks gray
-/// Generates the SVG code by targeting ONLY the specific text blocks 
-  /// of de-energized track groups and replacing their colors.
-/// Generates the SVG code by isolating target track group blocks 
-  /// and swapping color codes using simple string replacements.
-  /// Generates the SVG code by evaluating our control logic rules 
+ /// Generates the SVG code by evaluating our control logic rules 
   /// and replacing colors in the de-energized track blocks.
   String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) return '';
 
     String workingCopy = rawSvgTemplate;
 
-    // --- STEP 1: CALCULATE THE ENERGIZED STATE OF EACH TRACK GROUP ---
+    // --- STEP 1: PROPAGATE POWER THROUGH THE SWITCHES ---
+    // We create a map of which switches actually have incoming power to pass on.
+    final Map<String, bool> switchHasPower = {};
+
+    // Helper: Checks if a switch is physically closed (true)
+    bool isClosed(String name) => switchStates[name] ?? true;
+
+    // A. Define Seaside Power Flow (fed from C24)
+    final bool hasPowerC24 = isClosed('C24'); 
+    final bool hasPowerC16 = hasPowerC24 && isClosed('C16');
+    final bool hasPowerC32 = hasPowerC16 && isClosed('C32');
+    final bool hasPowerC17 = hasPowerC16 && isClosed('C17'); // Note: C16 feeds BOTH C32 and C17 in your tree.
+    
+    // C10 is fed if EITHER (C24 is closed AND C17 is closed) OR (C24 is closed and C10 is closed directly)
+    // Based on C24 => [..., C10] and C17 => [C10]
+    final bool hasPowerC10 = hasPowerC24 && hasPowerC17 && isClosed('C10');
+
+    // B. Define Landside Power Flow (fed from C25)
+    final bool hasPowerC25 = isClosed('C25');
+    final bool hasPowerC18 = hasPowerC25 && isClosed('C18');
+    final bool hasPowerC19 = hasPowerC18 && isClosed('C19');
+    final bool hasPowerC20 = hasPowerC19 && isClosed('C20');
+    final bool hasPowerC21 = hasPowerC20 && isClosed('C21');
+    final bool hasPowerC22 = hasPowerC21 && isClosed('C22');
+
+    // C. Define Feeders to the Landside Outfeed (C12, C13, C14, C15)
+    // Based on your rules, these are fed down the main trunk C25 -> C22,
+    // but also have individual parent gating switches (e.g. C19 => [C12], C20 => [C13], etc.)
+    final bool hasPowerC12 = hasPowerC22 && hasPowerC19 && isClosed('C12');
+    final bool hasPowerC13 = hasPowerC22 && hasPowerC20 && isClosed('C13');
+    final bool hasPowerC14 = hasPowerC22 && hasPowerC21 && isClosed('C14');
+    final bool hasPowerC15 = hasPowerC22 && hasPowerC22 && isClosed('C15'); // C22 feeds C15
+
+    // Store computed switch power states
+    switchHasPower['C24'] = hasPowerC24;
+    switchHasPower['C16'] = hasPowerC16;
+    switchHasPower['C32'] = hasPowerC32;
+    switchHasPower['C17'] = hasPowerC17;
+    switchHasPower['C10'] = hasPowerC10;
+    
+    switchHasPower['C25'] = hasPowerC25;
+    switchHasPower['C18'] = hasPowerC18;
+    switchHasPower['C19'] = hasPowerC19;
+    switchHasPower['C20'] = hasPowerC20;
+    switchHasPower['C21'] = hasPowerC21;
+    switchHasPower['C22'] = hasPowerC22;
+
+    switchHasPower['C12'] = hasPowerC12;
+    switchHasPower['C13'] = hasPowerC13;
+    switchHasPower['C14'] = hasPowerC14;
+    switchHasPower['C15'] = hasPowerC15;
+
+
+    // --- STEP 2: CALCULATE THE ENERGIZED STATE OF EACH TRACK GROUP ---
     final Map<String, bool> computedTrackStates = {};
 
-    // Standard 1-to-1 default tracks
+    // Default tracks: A track segment is only energized if its feeding switch is physically closed AND has power.
     for (var definition in switchDefinitions) {
-      // Skip groups that have custom logic rules below
       if (definition.trackGroupId == 'LandsideOutFeed' || 
           definition.trackGroupId == 'SeasideOutFeed' ||
           definition.trackGroupId == 'C35_Isolator') {
         continue;
       }
-      computedTrackStates[definition.trackGroupId] = switchStates[definition.name] ?? true;
+      
+      // Look up if the switch associated with this track segment actually has power flowing through it
+      computedTrackStates[definition.trackGroupId] = switchHasPower[definition.name] ?? isClosed(definition.name);
     }
 
-    // A. Evaluate the Base States (before C35 logic is applied)
-    // LandsideOutFeed base state: Energized if C12, C13, C14, OR C15 is closed
-    bool landsideBaseEnergized = (switchStates['C12'] ?? true) ||
-                                 (switchStates['C13'] ?? true) ||
-                                 (switchStates['C14'] ?? true) ||
-                                 (switchStates['C15'] ?? true);
+    // Evaluate the Base Outfeed States (before C35 bridging is applied)
+    // LandsideOutFeed is energized if ANY of its feeding switches (C12, C13, C14, C15) has active power flow
+    bool landsideBaseEnergized = hasPowerC12 || hasPowerC13 || hasPowerC14 || hasPowerC15;
 
-    // SeasideOutFeed base state: Energized if C10 is closed
-    bool seasideBaseEnergized = switchStates['C10'] ?? true;
+    // SeasideOutFeed is energized if C10 has active power flow
+    bool seasideBaseEnergized = hasPowerC10;
 
-// B. Apply C35 Tie/Isolator Logic
+    // Apply C35 Tie/Isolator Logic
     bool finalLandsideOutState = landsideBaseEnergized;
     bool finalSeasideOutState = seasideBaseEnergized;
 
-    bool isC35Closed = switchStates['C35'] ?? false;
-    
-    if (isC35Closed) {
+    if (isClosed('C35')) {
       // If C35 is CLOSED, power bridges across. 
-      // This means if EITHER side is energized, BOTH sides become energized!
+      // This means if EITHER side has active power, BOTH outfeeds become energized!
       if (landsideBaseEnergized || seasideBaseEnergized) {
         finalLandsideOutState = true;
         finalSeasideOutState = true;
       }
-    } else {
-      // If C35 is OPEN, they are completely isolated.
-      // LandsideOutFeed only cares about its own 4 switches.
-      // SeasideOutFeed only cares about C10.
-      finalLandsideOutState = landsideBaseEnergized;
-      finalSeasideOutState = seasideBaseEnergized;
     }
 
     // Save final calculated track states
     computedTrackStates['LandsideOutFeed'] = finalLandsideOutState;
     computedTrackStates['SeasideOutFeed'] = finalSeasideOutState;
 
-    // --- STEP 2: APPLY SWAP COLOR REPLACEMENTS ON DE-ENERGIZED TRACKS ---
+
+    // --- STEP 3: APPLY SWAP COLOR REPLACEMENTS ON DE-ENERGIZED TRACKS ---
     computedTrackStates.forEach((trackGroupId, isEnergized) {
       if (!isEnergized) {
         final String searchString = '<g id="$trackGroupId">';

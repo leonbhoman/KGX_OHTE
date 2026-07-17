@@ -157,10 +157,14 @@ class YardController {
 
 
     // C. Handle Incoming Feeders & Isolator Line
-    computedTrackStates['SeasideInFeeder1'] = forwardC24;
+    // InFeeder1 represents the incoming feed from the left (always live)
+    computedTrackStates['SeasideInFeeder1'] = true; 
+    computedTrackStates['LandsideInFeeder1'] = true;
+    
+    // InFeeder2 represents the track segment to the right of the switch
     computedTrackStates['SeasideInFeeder2'] = forwardC24;
-    computedTrackStates['LandsideInFeeder1'] = forwardC25;
     computedTrackStates['LandsideInFeeder2'] = forwardC25;
+    
     computedTrackStates['C35_Isolator'] = isClosed('C35');
 
 // --- STEP 4: APPLY COLOR REPLACEMENTS AND HOVER TOOLTIPS ---

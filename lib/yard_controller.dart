@@ -155,7 +155,7 @@ class YardController {
     computedTrackStates['C35_Isolator'] = isClosed('C35');
 
 
-// --- STEP 4: APPLY COLOR REPLACEMENTS AND HOVER TOOLTIPS ---
+// --- STEP 4: APPLY COLOR REPLACEMENTS AND HOVER TOOLTIPS ------
     // Mapping of group IDs to friendly descriptive text
     final Map<String, String> trackDescriptions = {
       'C32R53to59': 'Roads 53 to 59',

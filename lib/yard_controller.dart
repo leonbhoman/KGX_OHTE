@@ -81,91 +81,87 @@ class YardController {
 
     String workingCopy = rawSvgTemplate;
 
-// --- STEP 1: PROPAGATE POWER THROUGH THE SWITCHES ---
-    final Map<String, bool> switchHasPower = {};
-
+// --- STEP 1: PROPAGATE FORWARD POWER (FROM MAIN FEEDERS) ---
     // Helper: Checks if a switch is physically closed (true)
     bool isClosed(String name) => switchStates[name] ?? true;
 
-    // A. Seaside Power Flow (fed from C24)
-    final bool hasPowerC24 = isClosed('C24'); 
-    final bool hasPowerC16 = hasPowerC24 && isClosed('C16');
-    final bool hasPowerC32 = hasPowerC16 && isClosed('C32');
-    final bool hasPowerC17 = hasPowerC16 && isClosed('C17');
-    final bool hasPowerC10 = hasPowerC24 && hasPowerC17 && isClosed('C10');
-
-    // B. Landside Power Flow (fed in PARALLEL from C25)
-    final bool hasPowerC25 = isClosed('C25');
-    final bool hasPowerC18 = hasPowerC25 && isClosed('C18');
-    final bool hasPowerC19 = hasPowerC25 && isClosed('C19');
-    final bool hasPowerC20 = hasPowerC25 && isClosed('C20');
-    final bool hasPowerC21 = hasPowerC25 && isClosed('C21');
-    final bool hasPowerC22 = hasPowerC25 && isClosed('C22');
-
-    // C. Individual Outfeed lines (Each fed by its parent switch)
-    final bool hasPowerC12 = hasPowerC19 && isClosed('C12');
-    final bool hasPowerC13 = hasPowerC20 && isClosed('C13');
-    final bool hasPowerC14 = hasPowerC21 && isClosed('C14');
-    final bool hasPowerC15 = hasPowerC22 && isClosed('C15');
-
-    // Store computed switch power states
-    switchHasPower['C24'] = hasPowerC24;
-    switchHasPower['C16'] = hasPowerC16;
-    switchHasPower['C32'] = hasPowerC32;
-    switchHasPower['C17'] = hasPowerC17;
-    switchHasPower['C10'] = hasPowerC10;
+    // A. Forward Seaside Power Flow (Fed from incoming C24)
+    final bool forwardC24 = isClosed('C24'); 
+    final bool forwardC16 = forwardC24 && isClosed('C16');
+    final bool forwardC32 = forwardC16 && isClosed('C32');
     
-    switchHasPower['C25'] = hasPowerC25;
-    switchHasPower['C18'] = hasPowerC18;
-    switchHasPower['C19'] = hasPowerC19;
-    switchHasPower['C20'] = hasPowerC20;
-    switchHasPower['C21'] = hasPowerC21;
-    switchHasPower['C22'] = hasPowerC22;
+    // FIX: C17 is fed directly in PARALLEL from C24, totally independent of C16!
+    final bool forwardC17 = forwardC24 && isClosed('C17');
+    final bool forwardC10 = forwardC17 && isClosed('C10');
 
-    switchHasPower['C12'] = hasPowerC12;
-    switchHasPower['C13'] = hasPowerC13;
-    switchHasPower['C14'] = hasPowerC14;
-    switchHasPower['C15'] = hasPowerC15;
+    // B. Forward Landside Power Flow (Fed in PARALLEL from incoming C25)
+    final bool forwardC25 = isClosed('C25');
+    final bool forwardC18 = forwardC25 && isClosed('C18');
+    final bool forwardC19 = forwardC25 && isClosed('C19');
+    final bool forwardC20 = forwardC25 && isClosed('C20');
+    final bool forwardC21 = forwardC25 && isClosed('C21');
+    final bool forwardC22 = forwardC25 && isClosed('C22');
+
+    // Forward supply hitting the outfeed isolation gates
+    final bool forwardC12 = forwardC19 && isClosed('C12');
+    final bool forwardC13 = forwardC20 && isClosed('C13');
+    final bool forwardC14 = forwardC21 && isClosed('C14');
+    final bool forwardC15 = forwardC22 && isClosed('C15');
 
 
-    // --- STEP 2: CALCULATE THE ENERGIZED STATE OF EACH TRACK GROUP ---
+    // --- STEP 2: EVALUATE INTER-TIE BRIDGE & BACK-FEED LOGIC (C35) ---
+    // Determine base outfeed states from forward supply
+    bool landsideOutfeedHasPower = forwardC12 || forwardC13 || forwardC14 || forwardC15;
+    bool seasideOutfeedHasPower = forwardC10;
+
+    // If C35 is closed, it acts as a zero-resistance power tie. 
+    // Power from either energized outfeed floods into the other side.
+    if (isClosed('C35')) {
+      if (landsideOutfeedHasPower || seasideOutfeedHasPower) {
+        landsideOutfeedHasPower = true;
+        seasideOutfeedHasPower = true;
+      }
+    }
+
+    // --- STEP 3: CALCULATE COMBINED ENERGIZED TRACK STATES ---
     final Map<String, bool> computedTrackStates = {};
 
-    // Default tracks: A track segment is only energized if its feeding switch has active power flow.
-    for (var definition in switchDefinitions) {
-      if (definition.trackGroupId == 'LandsideOutFeed' || 
-          definition.trackGroupId == 'SeasideOutFeed' ||
-          definition.trackGroupId == 'C35_Isolator') {
-        continue;
-      }
-      
-      computedTrackStates[definition.trackGroupId] = switchHasPower[definition.name] ?? isClosed(definition.name);
-    }
-
-    // Evaluate the Base Outfeed States (before C35 bridging is applied)
-    // LandsideOutFeed is energized if ANY of its feeding branches actually carry power
-    bool landsideBaseEnergized = hasPowerC12 || hasPowerC13 || hasPowerC14 || hasPowerC15;
-
-    // SeasideOutFeed is energized if C10 has active power flow
-    bool seasideBaseEnergized = hasPowerC10;
-
-    // Apply C35 Tie/Isolator Logic
-    bool finalLandsideOutState = landsideBaseEnergized;
-    bool finalSeasideOutState = seasideBaseEnergized;
-
-    if (isClosed('C35')) {
-      if (landsideBaseEnergized || seasideBaseEnergized) {
-        finalLandsideOutState = true;
-        finalSeasideOutState = true;
-      }
-    }
-
-    // Save final calculated track states
-    computedTrackStates['LandsideOutFeed'] = finalLandsideOutState;
-    computedTrackStates['SeasideOutFeed'] = finalSeasideOutState;
+    // A. Seaside track group energization states
+    computedTrackStates['C16R46to52'] = forwardC16;
+    computedTrackStates['C32R53to59'] = forwardC32;
+    
+    // Seaside Outfeed track section is hot if the outfeed bus has power
+    computedTrackStates['SeasideOutFeed'] = seasideOutfeedHasPower;
+    
+    // C17 Track Group can be energized normally from front, OR back-fed from SeasideOutFeed via closed C10
+    computedTrackStates['C17R40to45'] = forwardC17 || (seasideOutfeedHasPower && isClosed('C10'));
 
 
-// --- STEP 3: APPLY COLOR REPLACEMENTS AND HOVER TOOLTIPS ---
+    // B. Landside track group energization states
+    // These sections can be energized forward from C25 OR back-fed from a hot LandsideOutFeed via their respective switches
+    computedTrackStates['C18R32to39'] = forwardC18; // Note: Fixes your small sliver as it now accurately follows C18
+    computedTrackStates['C19R24to31'] = forwardC19 || (landsideOutfeedHasPower && isClosed('C12'));
+    computedTrackStates['C20R16to23'] = forwardC20 || (landsideOutfeedHasPower && isClosed('C13'));
+    computedTrackStates['C21R8to15']  = forwardC21 || (landsideOutfeedHasPower && isClosed('C14'));
+    computedTrackStates['C22R1to7']   = forwardC22 || (landsideOutfeedHasPower && isClosed('C15'));
+
+    // Landside Outfeed track section is hot if the outfeed bus has power
+    computedTrackStates['LandsideOutFeed'] = landsideOutfeedHasPower;
+
+
+    // C. Handle Incoming Feeders (Always reflect main source presence)
+    computedTrackStates['SeasideInFeeder1'] = forwardC24;
+    computedTrackStates['SeasideInFeeder2'] = forwardC24;
+    computedTrackStates['LandsideInFeeder1'] = forwardC25;
+    computedTrackStates['LandsideInFeeder2'] = forwardC25;
+    computedTrackStates['C35_Isolator'] = isClosed('C35');
+
+
+    // --- STEP 4: APPLY COLOR REPLACEMENTS AND HOVER TOOLTIPS ---
+    // (This remains exactly as it was: looping over computedTrackStates and executing the replacements)
+
+
+// --- STEP 4: APPLY COLOR REPLACEMENTS AND HOVER TOOLTIPS ---
     // Mapping of group IDs to friendly descriptive text
     final Map<String, String> trackDescriptions = {
       'C32R53to59': 'Roads 53 to 59',

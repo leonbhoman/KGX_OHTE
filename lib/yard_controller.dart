@@ -82,15 +82,12 @@ class YardController {
     String workingCopy = rawSvgTemplate;
 
 // --- STEP 1: PROPAGATE FORWARD POWER (FROM MAIN FEEDERS) ---
-    // Helper: Checks if a switch is physically closed (true)
     bool isClosed(String name) => switchStates[name] ?? true;
 
     // A. Forward Seaside Power Flow (Fed from incoming C24)
     final bool forwardC24 = isClosed('C24'); 
     final bool forwardC16 = forwardC24 && isClosed('C16');
     final bool forwardC32 = forwardC16 && isClosed('C32');
-    
-    // FIX: C17 is fed directly in PARALLEL from C24, totally independent of C16!
     final bool forwardC17 = forwardC24 && isClosed('C17');
     final bool forwardC10 = forwardC17 && isClosed('C10');
 
@@ -110,56 +107,61 @@ class YardController {
 
 
     // --- STEP 2: EVALUATE INTER-TIE BRIDGE & BACK-FEED LOGIC (C35) ---
-    // Determine base outfeed states from forward supply
+    // Determine base outfeed bus power from forward supply lines
     bool landsideOutfeedHasPower = forwardC12 || forwardC13 || forwardC14 || forwardC15;
     bool seasideOutfeedHasPower = forwardC10;
 
-    // If C35 is closed, it acts as a zero-resistance power tie. 
-    // Power from either energized outfeed floods into the other side.
+    // Track if genuine cross-over back-feeding is occurring through C35
+    bool isBackFeedingFromSeasideToLandside = false;
+    bool isBackFeedingFromLandsideToSeaside = false;
+
     if (isClosed('C35')) {
-      if (landsideOutfeedHasPower || seasideOutfeedHasPower) {
+      // If Seaside is live and Landside has no forward power, Seaside back-feeds Landside
+      if (seasideOutfeedHasPower && !landsideOutfeedHasPower) {
+        isBackFeedingFromSeasideToLandside = true;
         landsideOutfeedHasPower = true;
+      }
+      // If Landside is live and Seaside has no forward power, Landside back-feeds Seaside
+      else if (landsideOutfeedHasPower && !seasideOutfeedHasPower) {
+        isBackFeedingFromLandsideToSeaside = true;
         seasideOutfeedHasPower = true;
       }
+      // If both sides are live anyway, the outfeed buses are both powered normally
+      else if (landsideOutfeedHasPower && seasideOutfeedHasPower) {
+        // Both keep power naturally
+      }
     }
+
 
     // --- STEP 3: CALCULATE COMBINED ENERGIZED TRACK STATES ---
     final Map<String, bool> computedTrackStates = {};
 
-    // A. Seaside track group energization states
+    // A. Seaside track groups
     computedTrackStates['C16R46to52'] = forwardC16;
     computedTrackStates['C32R53to59'] = forwardC32;
-    
-    // Seaside Outfeed track section is hot if the outfeed bus has power
     computedTrackStates['SeasideOutFeed'] = seasideOutfeedHasPower;
     
-    // C17 Track Group can be energized normally from front, OR back-fed from SeasideOutFeed via closed C10
-    computedTrackStates['C17R40to45'] = forwardC17 || (seasideOutfeedHasPower && isClosed('C10'));
+    // C17 is hot if forward powered OR back-fed from Landside through C35 and closed C10
+    computedTrackStates['C17R40to45'] = forwardC17 || (isBackFeedingFromLandsideToSeaside && isClosed('C10'));
 
-
-    // B. Landside track group energization states
-    // These sections can be energized forward from C25 OR back-fed from a hot LandsideOutFeed via their respective switches
-    computedTrackStates['C18R32to39'] = forwardC18; // Note: Fixes your small sliver as it now accurately follows C18
-    computedTrackStates['C19R24to31'] = forwardC19 || (landsideOutfeedHasPower && isClosed('C12'));
-    computedTrackStates['C20R16to23'] = forwardC20 || (landsideOutfeedHasPower && isClosed('C13'));
-    computedTrackStates['C21R8to15']  = forwardC21 || (landsideOutfeedHasPower && isClosed('C14'));
-    computedTrackStates['C22R1to7']   = forwardC22 || (landsideOutfeedHasPower && isClosed('C15'));
-
-    // Landside Outfeed track section is hot if the outfeed bus has power
+    // B. Landside track groups
+    computedTrackStates['C18R32to39'] = forwardC18;
     computedTrackStates['LandsideOutFeed'] = landsideOutfeedHasPower;
 
+    // FIX: Landside yard sections only illuminate if they get forward power from their feeder 
+    // OR if power is genuinely back-feeding from the Seaside line and their outfeed switch is closed!
+    computedTrackStates['C19R24to31'] = forwardC19 || (isBackFeedingFromSeasideToLandside && isClosed('C12'));
+    computedTrackStates['C20R16to23'] = forwardC20 || (isBackFeedingFromSeasideToLandside && isClosed('C13'));
+    computedTrackStates['C21R8to15']  = forwardC21 || (isBackFeedingFromSeasideToLandside && isClosed('C14'));
+    computedTrackStates['C22R1to7']   = forwardC22 || (isBackFeedingFromSeasideToLandside && isClosed('C15'));
 
-    // C. Handle Incoming Feeders (Always reflect main source presence)
+
+    // C. Handle Incoming Feeders & Isolator Line
     computedTrackStates['SeasideInFeeder1'] = forwardC24;
     computedTrackStates['SeasideInFeeder2'] = forwardC24;
     computedTrackStates['LandsideInFeeder1'] = forwardC25;
     computedTrackStates['LandsideInFeeder2'] = forwardC25;
     computedTrackStates['C35_Isolator'] = isClosed('C35');
-
-
-    // --- STEP 4: APPLY COLOR REPLACEMENTS AND HOVER TOOLTIPS ---
-    // (This remains exactly as it was: looping over computedTrackStates and executing the replacements)
-
 
 // --- STEP 4: APPLY COLOR REPLACEMENTS AND HOVER TOOLTIPS ---
     // Mapping of group IDs to friendly descriptive text

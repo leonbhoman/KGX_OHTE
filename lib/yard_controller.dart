@@ -88,41 +88,46 @@ class YardController {
 // --- STEP 1: INITIAL PHYSICAL SWITCH STATES ---
     bool isClosed(String name) => switchStates[name] ?? true;
 
-    // --- STEP 2: DEFINE TRACK ZONE FEED BUSES ---
-    // The Seaside feed lines (Upper track)
+// --- STEP 2: DEFINE TRACK ZONE FEED BUSES ---
+    // The Seaside forward feed lines (Upper track from C24)
     final bool rawSeasideFeeder = true;
     final bool forwardC24 = rawSeasideFeeder && isClosed('C24');
     final bool forwardC16 = forwardC24 && isClosed('C16');
     final bool forwardC32 = forwardC16 && isClosed('C32');
-    final bool forwardC17 = forwardC24 && isClosed('C17');
-    final bool forwardC10 = forwardC17 && isClosed('C10');
-
-    // The Landside Main Outfeed Bus (Right-hand side common rail)
-    // Live if Seaside feeds it via C35, OR if any middle line pushes power into it from the left.
-    bool landsideOutfeedHasPower = forwardC10 && isClosed('C35');
 
     // The Landside Common Inbound Bus (The rail between C25 and the middle switches)
-    // Live if C25 is closed forward, OR if any valid closed path back-feeds it from a live outfeed.
     bool landsideInboundBusHasPower = isClosed('C25');
 
-    // To prevent a single-pass calculation miss, we look at both forward and reverse paths explicitly
-    if (!landsideInboundBusHasPower) {
-      // If C25 is open, can we back-feed this inbound bus from the outfeed?
-      // Yes, if the outfeed has power and any valid track bridge is complete.
-      if (landsideOutfeedHasPower) {
-        if ((isClosed('C12') && isClosed('C19')) ||
-            (isClosed('C13') && isClosed('C20')) ||
-            (isClosed('C14') && isClosed('C21')) ||
-            (isClosed('C15') && isClosed('C22')) ||
-            isClosed('C18')) { // C18 is a direct spur
-          landsideInboundBusHasPower = true;
-        }
+    // The Landside Main Outfeed Bus (Right-hand side common rail)
+    // Live if C25 is feeding through any middle switch, OR if C24 is feeding via forwardC10 & C35
+    bool landsideOutfeedHasPower = isClosed('C25') && 
+        (isClosed('C12') || isClosed('C13') || isClosed('C14') || isClosed('C15') || isClosed('C18'));
+
+    // Resolve Seaside Outfeed Rail (at C10 / C35 boundary):
+    // Live if forward supply comes through C24 -> C17 -> C10,
+    // OR if C35 is closed and Landside Outfeed is live below!
+    final bool seasideForwardSupply = forwardC24 && isClosed('C17') && isClosed('C10');
+    bool seasideOutfeedHasPower = seasideForwardSupply || (isClosed('C35') && landsideOutfeedHasPower);
+
+    // If Seaside Outfeed got power from C35, back-feed the Landside Outfeed Bus:
+    if (isClosed('C35') && seasideOutfeedHasPower) {
+      landsideOutfeedHasPower = true;
+    }
+
+    // Back-feed Landside Inbound Bus if C25 is open but Landside Outfeed is live:
+    if (!landsideInboundBusHasPower && landsideOutfeedHasPower) {
+      if ((isClosed('C12') && isClosed('C19')) ||
+          (isClosed('C13') && isClosed('C20')) ||
+          (isClosed('C14') && isClosed('C21')) ||
+          (isClosed('C15') && isClosed('C22')) ||
+          isClosed('C18')) {
+        landsideInboundBusHasPower = true;
       }
     }
 
-    // Now re-verify the outfeed bus: if inbound is live, it can energize the outfeed rail
+    // Re-verify Landside Outfeed Bus if Landside Inbound is live:
     if (landsideInboundBusHasPower) {
-      if (isClosed('C12') || isClosed('C13') || isClosed('C14') || isClosed('C15')) {
+      if (isClosed('C12') || isClosed('C13') || isClosed('C14') || isClosed('C15') || isClosed('C18')) {
         landsideOutfeedHasPower = true;
       }
     }
@@ -130,21 +135,19 @@ class YardController {
     // --- STEP 3: ASSIGN LOGICAL STATES TO ALL TRACK SEGMENTS ---
     final Map<String, bool> computedTrackStates = {};
 
-    // A. Seaside Track Sections
+    // A. Seaside Track Sections (Bidirectional back to C24)
     computedTrackStates['C16R46to52'] = forwardC16;
     computedTrackStates['C32R53to59'] = forwardC32;
-    computedTrackStates['C17R40to45'] = forwardC17; 
-    computedTrackStates['SeasideOutFeed'] = forwardC10;
+    computedTrackStates['SeasideOutFeed'] = seasideOutfeedHasPower;
+    
+    // C17 is live if C24 is feeding forward OR if C35/C10 is back-feeding reverse:
+    computedTrackStates['C17R40to45'] = (forwardC24 && isClosed('C17')) || (seasideOutfeedHasPower && isClosed('C10') && isClosed('C17'));
 
     // B. Landside Common Rails
     computedTrackStates['LandsideOutFeed'] = landsideOutfeedHasPower;
-    
-    // This is the section right after C25 that was dead in Screenshot 2:
     computedTrackStates['LandsideInFeeder2'] = isClosed('C25') || landsideInboundBusHasPower;
 
     // C. Individual Middle Yard Track Blocks
-    // A yard section is energized if power comes from the left (Inbound Bus + Left Switch closed)
-    // OR if power comes from the right (Outfeed Bus + Right Switch closed).
     computedTrackStates['C18R32to39'] = landsideInboundBusHasPower && isClosed('C18');
     computedTrackStates['C19R24to31'] = (landsideInboundBusHasPower && isClosed('C19')) || (landsideOutfeedHasPower && isClosed('C12'));
     computedTrackStates['C20R16to23'] = (landsideInboundBusHasPower && isClosed('C20')) || (landsideOutfeedHasPower && isClosed('C13'));
@@ -156,7 +159,6 @@ class YardController {
     computedTrackStates['LandsideInFeeder1'] = true;
     computedTrackStates['SeasideInFeeder2'] = forwardC24;
     computedTrackStates['C35_Isolator'] = isClosed('C35');
-
 
 // --- STEP 4: APPLY COLOR REPLACEMENTS AND HOVER TOOLTIPS ------
     // Mapping of group IDs to friendly descriptive text

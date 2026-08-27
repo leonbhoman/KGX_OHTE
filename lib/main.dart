@@ -59,7 +59,7 @@ class _YardMapScreenState extends State<YardMapScreen> {
         pageFormat: PdfPageFormat.a4.landscape,
         build: (pw.Context context) {
           return pw.Column(
-            cross: pw.CrossAxisAlignment.start,
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
                 'KGX Yard OHTE Control Diagram',

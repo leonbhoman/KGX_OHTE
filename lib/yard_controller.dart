@@ -4,6 +4,9 @@
 
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class SwitchDefinition {
   final String name;
@@ -51,6 +54,7 @@ class YardController {
     const SwitchDefinition(name: 'C35', trackGroupId: 'C35_Isolator', initialClosed: false),
   ];
 
+  
   // Load coordinates and SVG layout
   Future<void> initializeYardData() async {
     try {
@@ -221,4 +225,141 @@ class YardController {
 
     return workingCopy;
   }
+
+/// Generates a high-contrast SVG string optimized for paper printing
+String buildPrintableSvgCode() {
+  if (rawSvgTemplate.isEmpty) return '';
+
+  String workingCopy = rawSvgTemplate;
+  bool isClosed(String name) => switchStates[name] ?? true;
+
+  // 1. Calculate track states (reusing core yard logic)
+  final bool forwardC24 = isClosed('C24');
+  final bool forwardC16 = forwardC24 && isClosed('C16');
+  final bool forwardC32 = forwardC16 && isClosed('C32');
+
+  bool landsideInboundBusHasPower = isClosed('C25');
+  bool landsideOutfeedHasPower = isClosed('C25') && 
+      (isClosed('C12') || isClosed('C13') || isClosed('C14') || isClosed('C15') || isClosed('C18'));
+
+  final bool seasideForwardSupply = forwardC24 && isClosed('C17') && isClosed('C10');
+  bool seasideOutfeedHasPower = seasideForwardSupply || (isClosed('C35') && landsideOutfeedHasPower);
+
+  if (isClosed('C35') && seasideOutfeedHasPower) landsideOutfeedHasPower = true;
+
+  if (!landsideInboundBusHasPower && landsideOutfeedHasPower) {
+    if ((isClosed('C12') && isClosed('C19')) ||
+        (isClosed('C13') && isClosed('C20')) ||
+        (isClosed('C14') && isClosed('C21')) ||
+        (isClosed('C15') && isClosed('C22')) ||
+        isClosed('C18')) {
+      landsideInboundBusHasPower = true;
+    }
+  }
+
+  if (landsideInboundBusHasPower) {
+    if (isClosed('C12') || isClosed('C13') || isClosed('C14') || isClosed('C15') || isClosed('C18')) {
+      landsideOutfeedHasPower = true;
+    }
+  }
+
+  final Map<String, bool> computedTrackStates = {
+    'C16R46to52': forwardC16,
+    'C32R53to59': forwardC32,
+    'SeasideOutFeed': seasideOutfeedHasPower,
+    'C17R40to45': (forwardC24 && isClosed('C17')) || (seasideOutfeedHasPower && isClosed('C10') && isClosed('C17')),
+    'LandsideOutFeed': landsideOutfeedHasPower,
+    'LandsideInFeeder2': isClosed('C25') || landsideInboundBusHasPower,
+    'C18R32to39': landsideInboundBusHasPower && isClosed('C18'),
+    'C19R24to31': (landsideInboundBusHasPower && isClosed('C19')) || (landsideOutfeedHasPower && isClosed('C12')),
+    'C20R16to23': (landsideInboundBusHasPower && isClosed('C20')) || (landsideOutfeedHasPower && isClosed('C13')),
+    'C21R8to15':  (landsideInboundBusHasPower && isClosed('C21')) || (landsideOutfeedHasPower && isClosed('C14')),
+    'C22R1to7':   (landsideInboundBusHasPower && isClosed('C22')) || (landsideOutfeedHasPower && isClosed('C15')),
+    'SeasideInFeeder1': true,
+    'LandsideInFeeder1': true,
+    'SeasideInFeeder2': forwardC24,
+    'C35_Isolator': isClosed('C35'),
+  };
+
+  // 2. Format SVG for Print Line Weights
+  computedTrackStates.forEach((trackGroupId, isEnergized) {
+    final String searchString = '<g id="$trackGroupId">';
+    final int groupStartIndex = workingCopy.indexOf(searchString);
+
+    if (groupStartIndex != -1) {
+      final int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
+      if (groupEndIndex != -1) {
+        String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
+
+        if (isEnergized) {
+          // ENERGIZED: Heavy Line Weight (5px) for maximum contrast
+          groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="5"');
+        } else {
+          // DE-ENERGIZED: Thin Line Weight (1.5px) + Gray fill
+          groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="1.5"');
+          final List<String> targetColors = [
+            '#0000ff', '#00ffff', '#cc65ff', '#ff0000', '#65ff00', '#ffcc00', '#965c00'
+          ];
+          for (String color in targetColors) {
+            groupContent = groupContent.replaceAll('stroke="$color"', 'stroke="#888888"');
+            groupContent = groupContent.replaceAll('fill="$color"', 'fill="#888888"');
+          }
+        }
+        workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
+      }
+    }
+  });
+
+  return workingCopy;
+}
+
+/// Helper to get a clean list of open/isolated switches for the print header
+String getIsolatedSwitchesSummary() {
+  final openSwitches = switchStates.entries
+      .where((entry) => !entry.value) // false = OPEN / Isolated
+      .map((entry) => entry.key)
+      .toList();
+
+  if (openSwitches.isEmpty) return 'None (Normal Feeding)';
+  return openSwitches.join(', ');
+}
+
+void printYardDiagram(YardController controller) async {
+  final pdf = pw.Document();
+  final svgCode = controller.buildPrintableSvgCode();
+  final openSwitchesText = controller.getIsolatedSwitchesSummary();
+
+  pdf.addPage(
+    pw.Page(
+      pageFormat: PdfPageFormat.a4.landscape,
+      build: (pw.Context context) {
+        return pw.Column(
+          cross: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              'KGX OHTE Switching Diagram',
+              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              'Switches Isolated: $openSwitchesText',
+              style: pw.TextStyle(fontSize: 12, color: PdfColors.red900, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 10),
+            pw.Expanded(
+              child: pw.SvgImage(svg: svgCode),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+
+  // Opens the browser's native print preview dialog directly in-app
+  await Printing.layoutPdf(
+    onLayout: (PdfPageFormat format) async => pdf.save(),
+    name: 'KGX_OHTE_Diagram.pdf',
+  );
+}
+
 }

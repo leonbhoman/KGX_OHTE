@@ -1,12 +1,5 @@
-// Starting again//
-// Need to make C35 feed back to C10 to C17
-// ==============================================
-
 import 'dart:convert';
 import 'package:flutter/services.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 class SwitchDefinition {
   final String name;
@@ -28,7 +21,8 @@ class YardController {
   final Map<String, bool> switchStates = {};
 
   // Master Table: Connects your switches, track groups, and their initial states
-  final List<SwitchDefinition> switchDefinitions = [const SwitchDefinition(name: 'C32', trackGroupId: 'C32R53to59'),
+  final List<SwitchDefinition> switchDefinitions = [
+    const SwitchDefinition(name: 'C32', trackGroupId: 'C32R53to59'),
     const SwitchDefinition(name: 'C16', trackGroupId: 'C16R46to52'),
     const SwitchDefinition(name: 'C17', trackGroupId: 'C17R40to45'),
     const SwitchDefinition(name: 'C18', trackGroupId: 'C18R32to39'),
@@ -54,7 +48,6 @@ class YardController {
     const SwitchDefinition(name: 'C35', trackGroupId: 'C35_Isolator', initialClosed: false),
   ];
 
-  
   // Load coordinates and SVG layout
   Future<void> initializeYardData() async {
     try {
@@ -82,43 +75,27 @@ class YardController {
     }
   }
 
- /// Generates the SVG code by evaluating our control logic rules 
-  /// and replacing colors in the de-energized track blocks.
-  String buildDynamicSvgCode() {
-    if (rawSvgTemplate.isEmpty) return '';
-
-    String workingCopy = rawSvgTemplate;
-
-// --- STEP 1: INITIAL PHYSICAL SWITCH STATES ---
+  // --- CORE ELECTRICAL EVALUATION LOGIC ---
+  // Shared by both on-screen rendering and PDF printing
+  Map<String, bool> _evaluateTrackStates() {
     bool isClosed(String name) => switchStates[name] ?? true;
 
-// --- STEP 2: DEFINE TRACK ZONE FEED BUSES ---
-    // The Seaside forward feed lines (Upper track from C24)
     final bool rawSeasideFeeder = true;
     final bool forwardC24 = rawSeasideFeeder && isClosed('C24');
     final bool forwardC16 = forwardC24 && isClosed('C16');
     final bool forwardC32 = forwardC16 && isClosed('C32');
 
-    // The Landside Common Inbound Bus (The rail between C25 and the middle switches)
     bool landsideInboundBusHasPower = isClosed('C25');
-
-    // The Landside Main Outfeed Bus (Right-hand side common rail)
-    // Live if C25 is feeding through any middle switch, OR if C24 is feeding via forwardC10 & C35
     bool landsideOutfeedHasPower = isClosed('C25') && 
         (isClosed('C12') || isClosed('C13') || isClosed('C14') || isClosed('C15') || isClosed('C18'));
 
-    // Resolve Seaside Outfeed Rail (at C10 / C35 boundary):
-    // Live if forward supply comes through C24 -> C17 -> C10,
-    // OR if C35 is closed and Landside Outfeed is live below!
     final bool seasideForwardSupply = forwardC24 && isClosed('C17') && isClosed('C10');
     bool seasideOutfeedHasPower = seasideForwardSupply || (isClosed('C35') && landsideOutfeedHasPower);
 
-    // If Seaside Outfeed got power from C35, back-feed the Landside Outfeed Bus:
     if (isClosed('C35') && seasideOutfeedHasPower) {
       landsideOutfeedHasPower = true;
     }
 
-    // Back-feed Landside Inbound Bus if C25 is open but Landside Outfeed is live:
     if (!landsideInboundBusHasPower && landsideOutfeedHasPower) {
       if ((isClosed('C12') && isClosed('C19')) ||
           (isClosed('C13') && isClosed('C20')) ||
@@ -129,43 +106,38 @@ class YardController {
       }
     }
 
-    // Re-verify Landside Outfeed Bus if Landside Inbound is live:
     if (landsideInboundBusHasPower) {
       if (isClosed('C12') || isClosed('C13') || isClosed('C14') || isClosed('C15') || isClosed('C18')) {
         landsideOutfeedHasPower = true;
       }
     }
 
-    // --- STEP 3: ASSIGN LOGICAL STATES TO ALL TRACK SEGMENTS ---
-    final Map<String, bool> computedTrackStates = {};
+    return {
+      'C16R46to52': forwardC16,
+      'C32R53to59': forwardC32,
+      'SeasideOutFeed': seasideOutfeedHasPower,
+      'C17R40to45': (forwardC24 && isClosed('C17')) || (seasideOutfeedHasPower && isClosed('C10') && isClosed('C17')),
+      'LandsideOutFeed': landsideOutfeedHasPower,
+      'LandsideInFeeder2': isClosed('C25') || landsideInboundBusHasPower,
+      'C18R32to39': landsideInboundBusHasPower && isClosed('C18'),
+      'C19R24to31': (landsideInboundBusHasPower && isClosed('C19')) || (landsideOutfeedHasPower && isClosed('C12')),
+      'C20R16to23': (landsideInboundBusHasPower && isClosed('C20')) || (landsideOutfeedHasPower && isClosed('C13')),
+      'C21R8to15':  (landsideInboundBusHasPower && isClosed('C21')) || (landsideOutfeedHasPower && isClosed('C14')),
+      'C22R1to7':   (landsideInboundBusHasPower && isClosed('C22')) || (landsideOutfeedHasPower && isClosed('C15')),
+      'SeasideInFeeder1': true, 
+      'LandsideInFeeder1': true,
+      'SeasideInFeeder2': forwardC24,
+      'C35_Isolator': isClosed('C35'),
+    };
+  }
 
-    // A. Seaside Track Sections (Bidirectional back to C24)
-    computedTrackStates['C16R46to52'] = forwardC16;
-    computedTrackStates['C32R53to59'] = forwardC32;
-    computedTrackStates['SeasideOutFeed'] = seasideOutfeedHasPower;
-    
-    // C17 is live if C24 is feeding forward OR if C35/C10 is back-feeding reverse:
-    computedTrackStates['C17R40to45'] = (forwardC24 && isClosed('C17')) || (seasideOutfeedHasPower && isClosed('C10') && isClosed('C17'));
+  /// Generates the standard SVG for live ON-SCREEN display
+  String buildDynamicSvgCode() {
+    if (rawSvgTemplate.isEmpty) return '';
 
-    // B. Landside Common Rails
-    computedTrackStates['LandsideOutFeed'] = landsideOutfeedHasPower;
-    computedTrackStates['LandsideInFeeder2'] = isClosed('C25') || landsideInboundBusHasPower;
+    String workingCopy = rawSvgTemplate;
+    final computedTrackStates = _evaluateTrackStates();
 
-    // C. Individual Middle Yard Track Blocks
-    computedTrackStates['C18R32to39'] = landsideInboundBusHasPower && isClosed('C18');
-    computedTrackStates['C19R24to31'] = (landsideInboundBusHasPower && isClosed('C19')) || (landsideOutfeedHasPower && isClosed('C12'));
-    computedTrackStates['C20R16to23'] = (landsideInboundBusHasPower && isClosed('C20')) || (landsideOutfeedHasPower && isClosed('C13'));
-    computedTrackStates['C21R8to15']  = (landsideInboundBusHasPower && isClosed('C21')) || (landsideOutfeedHasPower && isClosed('C14'));
-    computedTrackStates['C22R1to7']   = (landsideInboundBusHasPower && isClosed('C22')) || (landsideOutfeedHasPower && isClosed('C15'));
-
-    // Fixed Feeders & Isolators
-    computedTrackStates['SeasideInFeeder1'] = true; 
-    computedTrackStates['LandsideInFeeder1'] = true;
-    computedTrackStates['SeasideInFeeder2'] = forwardC24;
-    computedTrackStates['C35_Isolator'] = isClosed('C35');
-
-// --- STEP 4: APPLY COLOR REPLACEMENTS AND HOVER TOOLTIPS ------
-    // Mapping of group IDs to friendly descriptive text
     final Map<String, String> trackDescriptions = {
       'C32R53to59': 'Roads 53 to 59',
       'C16R46to52': 'Roads 46 to 52',
@@ -193,23 +165,14 @@ class YardController {
         if (groupEndIndex != -1) {
           String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
           
-          // 1. Inject SVG Hover Tooltip (Title tag) if a description exists
           if (trackDescriptions.containsKey(trackGroupId)) {
             final String tooltipXml = '<title>${trackDescriptions[trackGroupId]}</title>';
-            // Inject cleanly right after the opening group tag
             groupContent = groupContent.replaceFirst('>', '>\n$tooltipXml');
           }
 
-          // 2. Turn de-energized tracks gray
           if (!isEnergized) {
             final List<String> targetColors = [
-              '#0000ff', // Blue
-              '#00ffff', // Aqua
-              '#cc65ff', // Purple
-              '#ff0000', // Red
-              '#65ff00', // Lime Green
-              '#ffcc00', // Yellow
-              '#965c00', // Brown
+              '#0000ff', '#00ffff', '#cc65ff', '#ff0000', '#65ff00', '#ffcc00', '#965c00',
             ];
 
             for (String color in targetColors) {
@@ -226,140 +189,52 @@ class YardController {
     return workingCopy;
   }
 
-/// Generates a high-contrast SVG string optimized for paper printing
-String buildPrintableSvgCode() {
-  if (rawSvgTemplate.isEmpty) return '';
+  /// Generates high-contrast BOLD SVG specifically for PAPER PRINTING
+  String buildPrintableSvgCode() {
+    if (rawSvgTemplate.isEmpty) return '';
 
-  String workingCopy = rawSvgTemplate;
-  bool isClosed(String name) => switchStates[name] ?? true;
+    String workingCopy = rawSvgTemplate;
+    final computedTrackStates = _evaluateTrackStates();
 
-  // 1. Calculate track states (reusing core yard logic)
-  final bool forwardC24 = isClosed('C24');
-  final bool forwardC16 = forwardC24 && isClosed('C16');
-  final bool forwardC32 = forwardC16 && isClosed('C32');
+    computedTrackStates.forEach((trackGroupId, isEnergized) {
+      final String searchString = '<g id="$trackGroupId">';
+      final int groupStartIndex = workingCopy.indexOf(searchString);
 
-  bool landsideInboundBusHasPower = isClosed('C25');
-  bool landsideOutfeedHasPower = isClosed('C25') && 
-      (isClosed('C12') || isClosed('C13') || isClosed('C14') || isClosed('C15') || isClosed('C18'));
+      if (groupStartIndex != -1) {
+        final int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
+        if (groupEndIndex != -1) {
+          String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
 
-  final bool seasideForwardSupply = forwardC24 && isClosed('C17') && isClosed('C10');
-  bool seasideOutfeedHasPower = seasideForwardSupply || (isClosed('C35') && landsideOutfeedHasPower);
-
-  if (isClosed('C35') && seasideOutfeedHasPower) landsideOutfeedHasPower = true;
-
-  if (!landsideInboundBusHasPower && landsideOutfeedHasPower) {
-    if ((isClosed('C12') && isClosed('C19')) ||
-        (isClosed('C13') && isClosed('C20')) ||
-        (isClosed('C14') && isClosed('C21')) ||
-        (isClosed('C15') && isClosed('C22')) ||
-        isClosed('C18')) {
-      landsideInboundBusHasPower = true;
-    }
-  }
-
-  if (landsideInboundBusHasPower) {
-    if (isClosed('C12') || isClosed('C13') || isClosed('C14') || isClosed('C15') || isClosed('C18')) {
-      landsideOutfeedHasPower = true;
-    }
-  }
-
-  final Map<String, bool> computedTrackStates = {
-    'C16R46to52': forwardC16,
-    'C32R53to59': forwardC32,
-    'SeasideOutFeed': seasideOutfeedHasPower,
-    'C17R40to45': (forwardC24 && isClosed('C17')) || (seasideOutfeedHasPower && isClosed('C10') && isClosed('C17')),
-    'LandsideOutFeed': landsideOutfeedHasPower,
-    'LandsideInFeeder2': isClosed('C25') || landsideInboundBusHasPower,
-    'C18R32to39': landsideInboundBusHasPower && isClosed('C18'),
-    'C19R24to31': (landsideInboundBusHasPower && isClosed('C19')) || (landsideOutfeedHasPower && isClosed('C12')),
-    'C20R16to23': (landsideInboundBusHasPower && isClosed('C20')) || (landsideOutfeedHasPower && isClosed('C13')),
-    'C21R8to15':  (landsideInboundBusHasPower && isClosed('C21')) || (landsideOutfeedHasPower && isClosed('C14')),
-    'C22R1to7':   (landsideInboundBusHasPower && isClosed('C22')) || (landsideOutfeedHasPower && isClosed('C15')),
-    'SeasideInFeeder1': true,
-    'LandsideInFeeder1': true,
-    'SeasideInFeeder2': forwardC24,
-    'C35_Isolator': isClosed('C35'),
-  };
-
-  // 2. Format SVG for Print Line Weights
-  computedTrackStates.forEach((trackGroupId, isEnergized) {
-    final String searchString = '<g id="$trackGroupId">';
-    final int groupStartIndex = workingCopy.indexOf(searchString);
-
-    if (groupStartIndex != -1) {
-      final int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
-      if (groupEndIndex != -1) {
-        String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
-
-        if (isEnergized) {
-          // ENERGIZED: Heavy Line Weight (5px) for maximum contrast
-          groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="5"');
-        } else {
-          // DE-ENERGIZED: Thin Line Weight (1.5px) + Gray fill
-          groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="1.5"');
-          final List<String> targetColors = [
-            '#0000ff', '#00ffff', '#cc65ff', '#ff0000', '#65ff00', '#ffcc00', '#965c00'
-          ];
-          for (String color in targetColors) {
-            groupContent = groupContent.replaceAll('stroke="$color"', 'stroke="#888888"');
-            groupContent = groupContent.replaceAll('fill="$color"', 'fill="#888888"');
+          if (isEnergized) {
+            // ENERGIZED: Bump line thickness to 5px so live tracks pop on B&W printouts
+            groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="5"');
+          } else {
+            // DE-ENERGIZED: Thin 1.5px gray lines
+            groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="1.5"');
+            final List<String> targetColors = [
+              '#0000ff', '#00ffff', '#cc65ff', '#ff0000', '#65ff00', '#ffcc00', '#965c00',
+            ];
+            for (String color in targetColors) {
+              groupContent = groupContent.replaceAll('stroke="$color"', 'stroke="#888888"');
+              groupContent = groupContent.replaceAll('fill="$color"', 'fill="#888888"');
+            }
           }
+          workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
         }
-        workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
       }
-    }
-  });
+    });
 
-  return workingCopy;
-}
+    return workingCopy;
+  }
 
-/// Helper to get a clean list of open/isolated switches for the print header
-String getIsolatedSwitchesSummary() {
-  final openSwitches = switchStates.entries
-      .where((entry) => !entry.value) // false = OPEN / Isolated
-      .map((entry) => entry.key)
-      .toList();
+  /// Generates a clean comma-separated list of isolated switches for the print header
+  String getIsolatedSwitchesSummary() {
+    final openSwitches = switchStates.entries
+        .where((entry) => !entry.value) // false = OPEN / Isolated
+        .map((entry) => entry.key)
+        .toList();
 
-  if (openSwitches.isEmpty) return 'None (Normal Feeding)';
-  return openSwitches.join(', ');
-}
-
-void printYardDiagram(YardController controller) async {
-  final pdf = pw.Document();
-  final svgCode = controller.buildPrintableSvgCode();
-  final openSwitchesText = controller.getIsolatedSwitchesSummary();
-
-  pdf.addPage(
-    pw.Page(
-      pageFormat: PdfPageFormat.a4.landscape,
-      build: (pw.Context context) {
-        return pw.Column(
-          cross: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(
-              'KGX OHTE Switching Diagram',
-              style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 4),
-            pw.Text(
-              'Switches Isolated: $openSwitchesText',
-              style: pw.TextStyle(fontSize: 12, color: PdfColors.red900, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 10),
-            pw.Expanded(
-              child: pw.SvgImage(svg: svgCode),
-            ),
-          ],
-        );
-      },
-    ),
-  );
-
-  // Opens the browser's native print preview dialog directly in-app
-  await Printing.layoutPdf(
-    onLayout: (PdfPageFormat format) async => pdf.save(),
-    name: 'KGX_OHTE_Diagram.pdf',
-  );
-}
-
+    if (openSwitches.isEmpty) return 'None (Normal Feeding)';
+    return openSwitches.join(', ');
+  }
 }

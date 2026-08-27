@@ -31,6 +31,21 @@
 
   <title>kgx_ohte</title>
   <link rel="manifest" href="manifest.json">
+
+<style>
+  @media print {
+    /* Force white background for the entire document */
+    body, html, flt-glass-pane {
+      background-color: #ffffff !important;
+      color: #000000 !important;
+    }
+    /* Hide non-printable UI elements if needed */
+    .no-print {
+      display: none !important;
+    }
+  }
+</style>
+
 </head>
 <body>
   <!--

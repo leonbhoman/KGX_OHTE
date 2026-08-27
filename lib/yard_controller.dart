@@ -189,43 +189,55 @@ class YardController {
     return workingCopy;
   }
 
-  /// Generates high-contrast BOLD SVG specifically for PAPER PRINTING
-  String buildPrintableSvgCode() {
-    if (rawSvgTemplate.isEmpty) return '';
+  /// Generates an SVG string inverted for WHITE PAPER printing
+String buildPrintableSvgCode() {
+  if (rawSvgTemplate.isEmpty) return '';
 
-    String workingCopy = rawSvgTemplate;
-    final computedTrackStates = _evaluateTrackStates();
+  String workingCopy = rawSvgTemplate;
+  final computedTrackStates = _evaluateTrackStates();
 
-    computedTrackStates.forEach((trackGroupId, isEnergized) {
-      final String searchString = '<g id="$trackGroupId">';
-      final int groupStartIndex = workingCopy.indexOf(searchString);
+  // 1. Force SVG background rects/paths to white instead of dark gray/black
+  workingCopy = workingCopy.replaceAll('fill="#121212"', 'fill="#ffffff"');
+  workingCopy = workingCopy.replaceAll('fill="#000000"', 'fill="#ffffff"');
+  workingCopy = workingCopy.replaceAll('background:#121212', 'background:#ffffff');
 
-      if (groupStartIndex != -1) {
-        final int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
-        if (groupEndIndex != -1) {
-          String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
+  // 2. Adjust track lines for light paper background
+  computedTrackStates.forEach((trackGroupId, isEnergized) {
+    final String searchString = '<g id="$trackGroupId">';
+    final int groupStartIndex = workingCopy.indexOf(searchString);
 
-          if (isEnergized) {
-            // ENERGIZED: Bump line thickness to 5px so live tracks pop on B&W printouts
-            groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="5"');
-          } else {
-            // DE-ENERGIZED: Thin 1.5px gray lines
-            groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="1.5"');
-            final List<String> targetColors = [
-              '#0000ff', '#00ffff', '#cc65ff', '#ff0000', '#65ff00', '#ffcc00', '#965c00',
-            ];
-            for (String color in targetColors) {
-              groupContent = groupContent.replaceAll('stroke="$color"', 'stroke="#888888"');
-              groupContent = groupContent.replaceAll('fill="$color"', 'fill="#888888"');
-            }
+    if (groupStartIndex != -1) {
+      final int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
+      if (groupEndIndex != -1) {
+        String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
+
+        if (isEnergized) {
+          // LIVE TRACKS: Heavy 4px Solid Black lines
+          groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="4"');
+          final List<String> targetColors = [
+            '#0000ff', '#00ffff', '#cc65ff', '#ff0000', '#65ff00', '#ffcc00', '#965c00',
+          ];
+          for (String color in targetColors) {
+            groupContent = groupContent.replaceAll('stroke="$color"', 'stroke="#000000"');
           }
-          workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
+        } else {
+          // DEAD TRACKS: Thin 1.5px Light Gray lines
+          groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="1.5"');
+          final List<String> targetColors = [
+            '#0000ff', '#00ffff', '#cc65ff', '#ff0000', '#65ff00', '#ffcc00', '#965c00', '#444444'
+          ];
+          for (String color in targetColors) {
+            groupContent = groupContent.replaceAll('stroke="$color"', 'stroke="#bbbbbb"');
+            groupContent = groupContent.replaceAll('fill="$color"', 'fill="#bbbbbb"');
+          }
         }
+        workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
       }
-    });
+    }
+  });
 
-    return workingCopy;
-  }
+  return workingCopy;
+}
 
   /// Generates a clean comma-separated list of isolated switches for the print header
   String getIsolatedSwitchesSummary() {

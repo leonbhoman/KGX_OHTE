@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'yard_controller.dart';
 
 void main() {
@@ -44,7 +47,50 @@ class _YardMapScreenState extends State<YardMapScreen> {
     });
   }
 
-List<Widget> _buildSwitchNodes() {
+  // --- PRINTING HANDLER ---
+  Future<void> _handlePrint() async {
+    final pdf = pw.Document();
+
+    final printSvg = _controller.buildPrintableSvgCode();
+    final isolatedText = _controller.getIsolatedSwitchesSummary();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4.landscape,
+        build: (pw.Context context) {
+          return pw.Column(
+            cross: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'KGX Yard OHTE Control Diagram',
+                style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                'Isolated Switches: $isolatedText',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  color: PdfColors.red900,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 10),
+              pw.Expanded(
+                child: pw.SvgImage(svg: printSvg),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+      name: 'KGX_OHTE_Diagram.pdf',
+    );
+  }
+
+  List<Widget> _buildSwitchNodes() {
     final List<Widget> nodes = [];
 
     _controller.switchCoordinates.forEach((switchName, coords) {
@@ -102,23 +148,21 @@ List<Widget> _buildSwitchNodes() {
   }
 
   List<Widget> _buildRoadHoverZones() {
-    // Defines the precise vertical bounds (Top coordinate, Height) and labels 
-    // for the 9 distinct track blocks in the center of your SVG canvas.
     final List<Map<String, dynamic>> zones = [
-      {'left': 600.0, 'width': 150, 'top': 35.0, 'height': 40.0,   'label': 'Roads 53 to 59'}, // Blue
-      {'left': 530.0, 'width': 150, 'top': 120.0, 'height': 60.0, 'label': 'Roads 46 to 52'}, // Red
-      {'left': 520.0, 'width': 180, 'top': 190.0, 'height': 45.0,  'label': 'Roads 40 to 45'}, // Brown
-      {'left': 510.0, 'width': 180, 'top': 250.0, 'height': 65.0, 'label': 'Roads 32 to 39'}, // Green
-      {'left': 520.0, 'width': 180, 'top': 325.0, 'height': 65.0, 'label': 'Roads 24 to 31'}, // Red
-      {'left': 540.0, 'width': 150, 'top': 400.0, 'height': 120.0,  'label': 'Roads 16 to 23'}, // Yellow
-      {'left': 575.0, 'width': 125, 'top': 530.0, 'height': 65.0,  'label': 'Roads 8 to 15'},  // Green
-      {'left': 540.0, 'width': 160, 'top': 600.0, 'height': 85.0,  'label': 'Roads 1 to 7'},   // Red
-      ];
+      {'left': 600.0, 'width': 150, 'top': 35.0, 'height': 40.0,   'label': 'Roads 53 to 59'},
+      {'left': 530.0, 'width': 150, 'top': 120.0, 'height': 60.0, 'label': 'Roads 46 to 52'},
+      {'left': 520.0, 'width': 180, 'top': 190.0, 'height': 45.0,  'label': 'Roads 40 to 45'},
+      {'left': 510.0, 'width': 180, 'top': 250.0, 'height': 65.0, 'label': 'Roads 32 to 39'},
+      {'left': 520.0, 'width': 180, 'top': 325.0, 'height': 65.0, 'label': 'Roads 24 to 31'},
+      {'left': 540.0, 'width': 150, 'top': 400.0, 'height': 120.0,  'label': 'Roads 16 to 23'},
+      {'left': 575.0, 'width': 125, 'top': 530.0, 'height': 65.0,  'label': 'Roads 8 to 15'},
+      {'left': 540.0, 'width': 160, 'top': 600.0, 'height': 85.0,  'label': 'Roads 1 to 7'},
+    ];
 
     return zones.map((zone) {
       return Positioned(
-        left: zone['left'],         // Anchors right in the middle of the map (green box area)
-        width: zone['width'],        // Generous width for easy hovering
+        left: zone['left'],
+        width: zone['width'],
         top: zone['top'],
         height: zone['height'],
         child: Tooltip(
@@ -126,7 +170,7 @@ List<Widget> _buildSwitchNodes() {
           waitDuration: const Duration(milliseconds: 200),
           child: MouseRegion(
             cursor: SystemMouseCursors.help,
-            child: SizedBox.expand(), // This completely hides the green box while keeping hover fully active!,
+            child: const SizedBox.expand(),
           ),
         ),
       );
@@ -141,7 +185,6 @@ List<Widget> _buildSwitchNodes() {
       );
     }
 
-    // Regenerate the updated SVG code based on switch positions
     final String svgString = _controller.buildDynamicSvgCode();
 
     return Scaffold(
@@ -149,34 +192,36 @@ List<Widget> _buildSwitchNodes() {
       appBar: AppBar(
         title: const Text('KGX Yard OHTE Control Simulator'),
         backgroundColor: const Color(0xFF1E1E1E),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.print),
+            tooltip: 'Print Diagram',
+            onPressed: _handlePrint,
+          ),
+        ],
       ),
       body: Center(
         child: InteractiveViewer(
           maxScale: 5.0,
-          minScale: 0.2, // Allows zooming out further to see the whole yard
-          constrained: false, // CRITICAL: Tells Flutter this is an unconstrained 2D canvas
-          boundaryMargin: const EdgeInsets.all(200), // Gives comfortable panning space past the edges
+          minScale: 0.2,
+          constrained: false,
+          boundaryMargin: const EdgeInsets.all(200),
           child: Container(
-            width: 1605, // Hardcoded to match SVG viewBox width
-            height: 1111, // Hardcoded to match SVG viewBox height
+            width: 1605,
+            height: 1111,
             color: Colors.black,
             child: Stack(
-                  children: [
-                    // Render the dynamically updated SVG string
-                    if (svgString.isNotEmpty)
-                      SvgPicture.string(
-                        svgString,
-                        width: 1605,
-                        height: 1111,
-                      ),
-                    
-                    // 1. Invisible Road Hover Zones (Placed below switches so they don't block clicks)
-                    ..._buildRoadHoverZones(),
-
-                    // 2. Render interactive overlay switches
-                    ..._buildSwitchNodes(),
-                  ],
-                ),
+              children: [
+                if (svgString.isNotEmpty)
+                  SvgPicture.string(
+                    svgString,
+                    width: 1605,
+                    height: 1111,
+                  ),
+                ..._buildRoadHoverZones(),
+                ..._buildSwitchNodes(),
+              ],
+            ),
           ),
         ),
       ),

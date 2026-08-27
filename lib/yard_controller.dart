@@ -16,11 +16,8 @@ class SwitchDefinition {
 class YardController {
   String rawSvgTemplate = '';
   Map<String, List<double>> switchCoordinates = {};
-  
-  // Tracks the live state of each switch (true = closed/green, false = open/red)
   final Map<String, bool> switchStates = {};
 
-  // Master Table: Connects your switches, track groups, and their initial states
   final List<SwitchDefinition> switchDefinitions = [
     const SwitchDefinition(name: 'C32', trackGroupId: 'C32R53to59'),
     const SwitchDefinition(name: 'C16', trackGroupId: 'C16R46to52'),
@@ -34,21 +31,14 @@ class YardController {
     const SwitchDefinition(name: 'T31', trackGroupId: 'SeasideInFeeder1'),
     const SwitchDefinition(name: 'C24', trackGroupId: 'SeasideInFeeder2'),
     const SwitchDefinition(name: 'C23', trackGroupId: 'LandsideInFeeder1'),
-    
-    // Switches involved in the LandsideOutFeed logic:
     const SwitchDefinition(name: 'C15', trackGroupId: 'LandsideOutFeed'),
     const SwitchDefinition(name: 'C14', trackGroupId: 'LandsideOutFeed'),
     const SwitchDefinition(name: 'C13', trackGroupId: 'LandsideOutFeed'),
     const SwitchDefinition(name: 'C12', trackGroupId: 'LandsideOutFeed'),
-
-    // The Seaside control switch:
     const SwitchDefinition(name: 'C10', trackGroupId: 'SeasideOutFeed'),
-
-    // C35 acts as a Tie/Isolating Switch (starts OPEN/Red by default)
     const SwitchDefinition(name: 'C35', trackGroupId: 'C35_Isolator', initialClosed: false),
   ];
 
-  // Load coordinates and SVG layout
   Future<void> initializeYardData() async {
     try {
       final String jsonString = await rootBundle.loadString('assets/kgx_switch-coords.json');
@@ -58,7 +48,6 @@ class YardController {
       
       rawSvgTemplate = await rootBundle.loadString('assets/kgx_yard_map.svg');
       
-      // Setup initial switch states from definitions
       for (var definition in switchDefinitions) {
         switchStates[definition.name] = definition.initialClosed;
       }
@@ -67,16 +56,12 @@ class YardController {
     }
   }
 
-  // Toggle switch state
   void toggleSwitch(String switchName) {
     if (switchStates.containsKey(switchName)) {
       switchStates[switchName] = !switchStates[switchName]!;
-      print("Switch $switchName toggled to: ${switchStates[switchName]! ? 'CLOSED' : 'OPEN'}");
     }
   }
 
-  // --- CORE ELECTRICAL EVALUATION LOGIC ---
-  // Shared by both on-screen rendering and PDF printing
   Map<String, bool> _evaluateTrackStates() {
     bool isClosed(String name) => switchStates[name] ?? true;
 
@@ -131,7 +116,6 @@ class YardController {
     };
   }
 
-  /// Generates the standard SVG for live ON-SCREEN display
   String buildDynamicSvgCode() {
     if (rawSvgTemplate.isEmpty) return '';
 
@@ -189,60 +173,54 @@ class YardController {
     return workingCopy;
   }
 
-  /// Generates an SVG string inverted for WHITE PAPER printing
-String buildPrintableSvgCode() {
-  if (rawSvgTemplate.isEmpty) return '';
+  String buildPrintableSvgCode() {
+    if (rawSvgTemplate.isEmpty) return '';
 
-  String workingCopy = rawSvgTemplate;
-  final computedTrackStates = _evaluateTrackStates();
+    String workingCopy = rawSvgTemplate;
+    final computedTrackStates = _evaluateTrackStates();
 
-  // 1. Force SVG background rects/paths to white instead of dark gray/black
-  workingCopy = workingCopy.replaceAll('fill="#121212"', 'fill="#ffffff"');
-  workingCopy = workingCopy.replaceAll('fill="#000000"', 'fill="#ffffff"');
-  workingCopy = workingCopy.replaceAll('background:#121212', 'background:#ffffff');
+    workingCopy = workingCopy.replaceAll('fill="#121212"', 'fill="#ffffff"');
+    workingCopy = workingCopy.replaceAll('fill="#000000"', 'fill="#ffffff"');
+    workingCopy = workingCopy.replaceAll('background:#121212', 'background:#ffffff');
 
-  // 2. Adjust track lines for light paper background
-  computedTrackStates.forEach((trackGroupId, isEnergized) {
-    final String searchString = '<g id="$trackGroupId">';
-    final int groupStartIndex = workingCopy.indexOf(searchString);
+    computedTrackStates.forEach((trackGroupId, isEnergized) {
+      final String searchString = '<g id="$trackGroupId">';
+      final int groupStartIndex = workingCopy.indexOf(searchString);
 
-    if (groupStartIndex != -1) {
-      final int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
-      if (groupEndIndex != -1) {
-        String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
+      if (groupStartIndex != -1) {
+        final int groupEndIndex = workingCopy.indexOf('</g>', groupStartIndex);
+        if (groupEndIndex != -1) {
+          String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
 
-        if (isEnergized) {
-          // LIVE TRACKS: Heavy 4px Solid Black lines
-          groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="4"');
-          final List<String> targetColors = [
-            '#0000ff', '#00ffff', '#cc65ff', '#ff0000', '#65ff00', '#ffcc00', '#965c00',
-          ];
-          for (String color in targetColors) {
-            groupContent = groupContent.replaceAll('stroke="$color"', 'stroke="#000000"');
+          if (isEnergized) {
+            groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="4"');
+            final List<String> targetColors = [
+              '#0000ff', '#00ffff', '#cc65ff', '#ff0000', '#65ff00', '#ffcc00', '#965c00',
+            ];
+            for (String color in targetColors) {
+              groupContent = groupContent.replaceAll('stroke="$color"', 'stroke="#000000"');
+            }
+          } else {
+            groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="1.5"');
+            final List<String> targetColors = [
+              '#0000ff', '#00ffff', '#cc65ff', '#ff0000', '#65ff00', '#ffcc00', '#965c00', '#444444'
+            ];
+            for (String color in targetColors) {
+              groupContent = groupContent.replaceAll('stroke="$color"', 'stroke="#bbbbbb"');
+              groupContent = groupContent.replaceAll('fill="$color"', 'fill="#bbbbbb"');
+            }
           }
-        } else {
-          // DEAD TRACKS: Thin 1.5px Light Gray lines
-          groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="1.5"');
-          final List<String> targetColors = [
-            '#0000ff', '#00ffff', '#cc65ff', '#ff0000', '#65ff00', '#ffcc00', '#965c00', '#444444'
-          ];
-          for (String color in targetColors) {
-            groupContent = groupContent.replaceAll('stroke="$color"', 'stroke="#bbbbbb"');
-            groupContent = groupContent.replaceAll('fill="$color"', 'fill="#bbbbbb"');
-          }
+          workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
         }
-        workingCopy = workingCopy.replaceRange(groupStartIndex, groupEndIndex, groupContent);
       }
-    }
-  });
+    });
 
-  return workingCopy;
-}
+    return workingCopy;
+  }
 
-  /// Generates a clean comma-separated list of isolated switches for the print header
   String getIsolatedSwitchesSummary() {
     final openSwitches = switchStates.entries
-        .where((entry) => !entry.value) // false = OPEN / Isolated
+        .where((entry) => !entry.value)
         .map((entry) => entry.key)
         .toList();
 

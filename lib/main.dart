@@ -32,7 +32,9 @@ class YardMapScreen extends StatefulWidget {
 
 class _YardMapScreenState extends State<YardMapScreen> {
   final YardController _controller = YardController();
+  final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -45,6 +47,18 @@ class _YardMapScreenState extends State<YardMapScreen> {
     setState(() {
       _isLoading = false;
     });
+  }
+
+  // Quick-toggle switch from search input
+  void _submitSearch(String query) {
+    final formattedQuery = query.trim().toUpperCase();
+    if (_controller.switchStates.containsKey(formattedQuery)) {
+      setState(() {
+        _controller.toggleSwitch(formattedQuery);
+        _searchController.clear();
+        _searchQuery = '';
+      });
+    }
   }
 
   // --- PRINTING HANDLER ---
@@ -99,11 +113,13 @@ class _YardMapScreenState extends State<YardMapScreen> {
       final double y = coords[1];
 
       final bool isSwitchClosed = _controller.switchStates[switchName] ?? true;
+      final bool isSearchMatch = _searchQuery.isNotEmpty && 
+          switchName.toUpperCase().contains(_searchQuery);
 
       nodes.add(
         Positioned(
-          left: x - 12, 
-          top: y - 12,
+          left: x - 14, 
+          top: y - 14,
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
@@ -114,17 +130,23 @@ class _YardMapScreenState extends State<YardMapScreen> {
                 });
               },
               child: Tooltip(
-                message: 'Switch $switchName',
-                child: Container(
-                  width: 24,  
-                  height: 24,
+                message: 'Switch $switchName (Click to toggle)',
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: isSearchMatch ? 28 : 24,  
+                  height: isSearchMatch ? 28 : 24,
                   decoration: BoxDecoration(
                     color: const Color(0xFF222222), 
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSwitchClosed ? Colors.greenAccent : Colors.redAccent, 
-                      width: 2.5
+                      color: isSearchMatch 
+                          ? Colors.amberAccent 
+                          : (isSwitchClosed ? Colors.greenAccent : Colors.redAccent), 
+                      width: isSearchMatch ? 3.5 : 2.5,
                     ),
+                    boxShadow: isSearchMatch
+                        ? [const BoxShadow(color: Colors.amberAccent, blurRadius: 8, spreadRadius: 2)]
+                        : [],
                   ),
                   child: Center(
                     child: Text(
@@ -132,8 +154,10 @@ class _YardMapScreenState extends State<YardMapScreen> {
                       style: TextStyle(
                         fontSize: 8, 
                         fontWeight: FontWeight.bold, 
-                        color: isSwitchClosed ? Colors.greenAccent : Colors.redAccent,
-                      )
+                        color: isSearchMatch 
+                            ? Colors.amberAccent 
+                            : (isSwitchClosed ? Colors.greenAccent : Colors.redAccent),
+                      ),
                     ),
                   ),
                 ),
@@ -193,6 +217,45 @@ class _YardMapScreenState extends State<YardMapScreen> {
         title: const Text('KGX Yard OHTE Control Simulator'),
         backgroundColor: const Color(0xFF1E1E1E),
         actions: [
+          Container(
+            width: 180,
+            height: 36,
+            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(fontSize: 13, color: Colors.white),
+              textCapitalization: TextCapitalization.characters,
+              decoration: InputDecoration(
+                hintText: 'Search switch...',
+                hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+                prefixIcon: const Icon(Icons.search, size: 16, color: Colors.grey),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 14, color: Colors.grey),
+                        onPressed: () {
+                          setState(() {
+                            _searchController.clear();
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+                filled: true,
+                fillColor: const Color(0xFF2A2A2A),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.trim().toUpperCase();
+                });
+              },
+              onSubmitted: _submitSearch,
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.print),
             tooltip: 'Print Diagram',

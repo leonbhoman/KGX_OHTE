@@ -33,6 +33,14 @@ class YardMapScreen extends StatefulWidget {
 class _YardMapScreenState extends State<YardMapScreen> {
   final YardController _controller = YardController();
   final TextEditingController _searchController = TextEditingController();
+
+  // --- PLANNER / OCCUPATION FIELD CONTROLLERS ---
+  final TextEditingController _plannerController = TextEditingController();
+  final TextEditingController _technicianController = TextEditingController();
+  final TextEditingController _noticeController = TextEditingController();
+  final TextEditingController _timeGrantedController = TextEditingController();
+  final TextEditingController _timeReturnedController = TextEditingController();
+
   bool _isLoading = true;
   String _searchQuery = '';
 
@@ -49,7 +57,6 @@ class _YardMapScreenState extends State<YardMapScreen> {
     });
   }
 
-  // Quick-toggle switch from search input
   void _submitSearch(String query) {
     final formattedQuery = query.trim().toUpperCase();
     if (_controller.switchStates.containsKey(formattedQuery)) {
@@ -61,7 +68,7 @@ class _YardMapScreenState extends State<YardMapScreen> {
     }
   }
 
-  // --- PRINTING HANDLER ---
+  // --- PRINTING HANDLER WITH METADATA HEADER ---
   Future<void> _handlePrint() async {
     final pdf = pw.Document();
 
@@ -71,24 +78,63 @@ class _YardMapScreenState extends State<YardMapScreen> {
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4.landscape,
+        margin: const pw.EdgeInsets.all(20),
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(
-                'KGX Yard OHTE Control Diagram',
-                style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+              // Title Header
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'KGX YARD OHTE ISOLATION DIAGRAM',
+                    style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+                  ),
+                  pw.Text(
+                    'Notice / Occ #: ${_noticeController.text.isEmpty ? 'N/A' : _noticeController.text}',
+                    style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                  ),
+                ],
               ),
-              pw.SizedBox(height: 4),
-              pw.Text(
-                'Isolated Switches: $isolatedText',
-                style: pw.TextStyle(
-                  fontSize: 12,
-                  color: PdfColors.red900,
-                  fontWeight: pw.FontWeight.bold,
+              pw.SizedBox(height: 6),
+
+              // Planner & Technician Metadata Box
+              pw.Container(
+                padding: const pw.EdgeInsets.all(6),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey600, width: 1),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Planner: ${_plannerController.text.isEmpty ? '________' : _plannerController.text}', style: const pw.TextStyle(fontSize: 10)),
+                    pw.Text('Technician: ${_technicianController.text.isEmpty ? '________' : _technicianController.text}', style: const pw.TextStyle(fontSize: 10)),
+                    pw.Text('Time Granted: ${_timeGrantedController.text.isEmpty ? '________' : _timeGrantedController.text}', style: const pw.TextStyle(fontSize: 10)),
+                    pw.Text('Time Returned: ${_timeReturnedController.text.isEmpty ? '________' : _timeReturnedController.text}', style: const pw.TextStyle(fontSize: 10)),
+                  ],
                 ),
               ),
-              pw.SizedBox(height: 10),
+              pw.SizedBox(height: 6),
+
+              // Isolated Switches & Section Insulators Summary Banner
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(6),
+                color: PdfColors.red100,
+                child: pw.Text(
+                  'ISOLATED SWITCHES & INSULATORS: $isolatedText',
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    color: PdfColors.red900,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 8),
+
+              // SVG Map Section
               pw.Expanded(
                 child: pw.SvgImage(svg: printSvg),
               ),
@@ -100,7 +146,30 @@ class _YardMapScreenState extends State<YardMapScreen> {
 
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
-      name: 'KGX_OHTE_Diagram.pdf',
+      name: 'KGX_OHTE_Isolation_Plan.pdf',
+    );
+  }
+
+  Widget _buildPlannerField(String label, TextEditingController controller, {double width = 120}) {
+    return Container(
+      width: width,
+      height: 32,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      child: TextField(
+        controller: controller,
+        style: const TextStyle(fontSize: 12, color: Colors.white),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Colors.grey, fontSize: 10),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+          filled: true,
+          fillColor: const Color(0xFF2A2A2A),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(4),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
     );
   }
 
@@ -210,28 +279,37 @@ class _YardMapScreenState extends State<YardMapScreen> {
     }
 
     final String svgString = _controller.buildDynamicSvgCode();
+    final String isolatedSummary = _controller.getIsolatedSwitchesSummary();
 
     return Scaffold(
       backgroundColor: const Color(0xFF111111),
       appBar: AppBar(
-        title: const Text('KGX Yard OHTE Control Simulator'),
+        title: const Text('KGX Yard OHTE Control Simulator', style: TextStyle(fontSize: 16)),
         backgroundColor: const Color(0xFF1E1E1E),
         actions: [
+          // Planner Metadata Inputs
+          _buildPlannerField('Planner', _plannerController, width: 110),
+          _buildPlannerField('Technician', _technicianController, width: 110),
+          _buildPlannerField('Occ / Notice #', _noticeController, width: 100),
+          _buildPlannerField('Time Granted', _timeGrantedController, width: 90),
+          _buildPlannerField('Time Returned', _timeReturnedController, width: 90),
+
+          // Search Switch Input
           Container(
-            width: 180,
-            height: 36,
-            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+            width: 130,
+            height: 32,
+            margin: const EdgeInsets.symmetric(horizontal: 6),
             child: TextField(
               controller: _searchController,
-              style: const TextStyle(fontSize: 13, color: Colors.white),
+              style: const TextStyle(fontSize: 12, color: Colors.white),
               textCapitalization: TextCapitalization.characters,
               decoration: InputDecoration(
-                hintText: 'Search switch...',
-                hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
-                prefixIcon: const Icon(Icons.search, size: 16, color: Colors.grey),
+                hintText: 'Search...',
+                hintStyle: const TextStyle(color: Colors.grey, fontSize: 11),
+                prefixIcon: const Icon(Icons.search, size: 14, color: Colors.grey),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear, size: 14, color: Colors.grey),
+                        icon: const Icon(Icons.clear, size: 12, color: Colors.grey),
                         onPressed: () {
                           setState(() {
                             _searchController.clear();
@@ -240,11 +318,11 @@ class _YardMapScreenState extends State<YardMapScreen> {
                         },
                       )
                     : null,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 6),
                 filled: true,
                 fillColor: const Color(0xFF2A2A2A),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(4),
                   borderSide: BorderSide.none,
                 ),
               ),
@@ -256,12 +334,40 @@ class _YardMapScreenState extends State<YardMapScreen> {
               onSubmitted: _submitSearch,
             ),
           ),
+
           IconButton(
             icon: const Icon(Icons.print),
             tooltip: 'Print Diagram',
             onPressed: _handlePrint,
           ),
         ],
+
+        // Live updating de-energized switches & section insulators banner
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(28.0),
+          child: Container(
+            width: double.infinity,
+            color: const Color(0xFF2D1515),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.redAccent),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'ISOLATED SWITCHES & SECTION INSULATORS: ',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.redAccent),
+                  ),
+                  Text(
+                    isolatedSummary,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
       body: Center(
         child: InteractiveViewer(

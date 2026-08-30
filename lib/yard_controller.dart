@@ -18,6 +18,15 @@ class YardController {
   Map<String, List<double>> switchCoordinates = {};
   final Map<String, bool> switchStates = {};
 
+  // Section Insulators dictionary mapping switches to physical insulators
+  final Map<String, List<String>> switchSectionInsulators = {
+    'C25': ['H4', 'H5', 'H6'],
+    'C35': ['H12'],
+    'C32': ['H1'],
+    'C16': ['H2', 'H3'],
+    // Add additional switch-to-insulator mappings here as needed
+  };
+
   final List<SwitchDefinition> switchDefinitions = [
     const SwitchDefinition(name: 'C32', trackGroupId: 'C32R53to59'),
     const SwitchDefinition(name: 'C16', trackGroupId: 'C16R46to52'),
@@ -180,12 +189,10 @@ class YardController {
     String workingCopy = rawSvgTemplate;
     final computedTrackStates = _evaluateTrackStates();
 
-    // 1. Force SVG background rects/paths to white instead of dark gray/black
     workingCopy = workingCopy.replaceAll('fill="#121212"', 'fill="#ffffff"');
     workingCopy = workingCopy.replaceAll('fill="#000000"', 'fill="#ffffff"');
     workingCopy = workingCopy.replaceAll('background:#121212', 'background:#ffffff');
 
-    // 2. Adjust track lines for light paper background
     computedTrackStates.forEach((trackGroupId, isEnergized) {
       final String searchString = '<g id="$trackGroupId">';
       final int groupStartIndex = workingCopy.indexOf(searchString);
@@ -196,7 +203,6 @@ class YardController {
           String groupContent = workingCopy.substring(groupStartIndex, groupEndIndex);
 
           if (isEnergized) {
-            // LIVE TRACKS: Heavy 4px Solid Black lines
             groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="4"');
             final List<String> targetColors = [
               '#0000ff', '#00ffff', '#cc65ff', '#ff0000', '#65ff00', '#ffcc00', '#965c00',
@@ -205,7 +211,6 @@ class YardController {
               groupContent = groupContent.replaceAll('stroke="$color"', 'stroke="#000000"');
             }
           } else {
-            // DEAD TRACKS: Thin 1.5px Light Gray lines
             groupContent = groupContent.replaceAll('stroke-width="2"', 'stroke-width="1.5"');
             final List<String> targetColors = [
               '#0000ff', '#00ffff', '#cc65ff', '#ff0000', '#65ff00', '#ffcc00', '#965c00', '#444444'
@@ -220,7 +225,6 @@ class YardController {
       }
     });
 
-    // 3. Inject Vector Switch Nodes directly into the SVG output for PDF rendering
     StringBuffer switchNodesSvg = StringBuffer();
     switchNodesSvg.write('<g id="PrintableSwitchNodes">');
 
@@ -231,13 +235,11 @@ class YardController {
         final bool isClosed = switchStates[switchName] ?? true;
 
         if (isClosed) {
-          // BOLD CLOSED SWITCH: Solid 3px Black Border, White Interior, Bold Black Text
           switchNodesSvg.write('''
             <circle cx="$x" cy="$y" r="14" fill="#ffffff" stroke="#000000" stroke-width="3"/>
             <text x="$x" y="${y + 4}" font-family="Arial" font-size="10" font-weight="bold" fill="#000000" text-anchor="middle">$switchName</text>
           ''');
         } else {
-          // MUTED OPEN SWITCH: Dashed 1.5px Gray Border, Light Gray Interior, Muted Text
           switchNodesSvg.write('''
             <circle cx="$x" cy="$y" r="14" fill="#f0f0f0" stroke="#888888" stroke-width="1.5" stroke-dasharray="3,2"/>
             <text x="$x" y="${y + 4}" font-family="Arial" font-size="9" font-weight="bold" fill="#888888" text-anchor="middle">$switchName</text>
@@ -248,7 +250,6 @@ class YardController {
 
     switchNodesSvg.write('</g>');
 
-    // Insert the switch elements right before the closing </svg> tag
     final int closingSvgIndex = workingCopy.lastIndexOf('</svg>');
     if (closingSvgIndex != -1) {
       workingCopy = workingCopy.replaceRange(
@@ -261,6 +262,7 @@ class YardController {
     return workingCopy;
   }
 
+  /// Generates a structured summary of isolated switches and their section insulators
   String getIsolatedSwitchesSummary() {
     final openSwitches = switchStates.entries
         .where((entry) => !entry.value)
@@ -268,6 +270,18 @@ class YardController {
         .toList();
 
     if (openSwitches.isEmpty) return 'None (Normal Feeding)';
-    return openSwitches.join(', ');
+
+    List<String> formattedEntries = [];
+    for (String sw in openSwitches) {
+      if (switchSectionInsulators.containsKey(sw) &&
+          switchSectionInsulators[sw]!.isNotEmpty) {
+        final insulators = switchSectionInsulators[sw]!.join(', ');
+        formattedEntries.add('$sw ($insulators)');
+      } else {
+        formattedEntries.add(sw);
+      }
+    }
+
+    return formattedEntries.join(' | ');
   }
 }

@@ -20,10 +20,24 @@ class YardController {
 
   // Section Insulators dictionary mapping switches to physical insulators
   final Map<String, List<String>> switchSectionInsulators = {
-    'C25': ['H4', 'H5', 'H6'],
-    'C35': ['H12'],
-    'C32': ['H1'],
-    'C16': ['H2', 'H3'],
+    'C24' : ['H2'],
+    'C16' : ['H4'],
+    'C32' : ['H19', 'H20'],
+    'C17' : ['H5'],
+    'C10' : ['H27'],
+    'C35' : ['H35'],
+    'C25' : ['H3'],
+    'C22' : ['H16'],
+    'C15' : ['H26'],
+    'C18' : ['H6', 'H35', 'H21'],
+    'C19' : ['H7'],
+    'C12' : ['H22', 'H8'],
+    'C13' : ['H23', 'H9', 'H10', 'H11'],
+    'C14' : ['H25'],
+    'C20' : ['H9', 'H10', 'H11'], 
+    'C21' : ['H14'], 
+
+    
     // Add additional switch-to-insulator mappings here as needed
   };
 

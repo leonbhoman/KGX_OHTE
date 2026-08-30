@@ -284,7 +284,7 @@ class _YardMapScreenState extends State<YardMapScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF111111),
       appBar: AppBar(
-        title: const Text('KGX Yard OHTE Control Simulator', style: TextStyle(fontSize: 16)),
+        title: const Text('KGX Yard OHTE Occupation Switching - OCC COntrol Telephone 011 544 9785', style: TextStyle(fontSize: 16)),
         backgroundColor: const Color(0xFF1E1E1E),
         actions: [
           // Planner Metadata Inputs

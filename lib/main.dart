@@ -88,7 +88,7 @@ class _YardMapScreenState extends State<YardMapScreen> {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(
-                    'KGX YARD OHTE ISOLATION DIAGRAM',
+                    'KGX YARD OHTE OCCUPATION SWITCHING DIAGRAM',
                     style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
                   ),
                   pw.Text(

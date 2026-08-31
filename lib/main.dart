@@ -291,8 +291,8 @@ class _YardMapScreenState extends State<YardMapScreen> {
         actions: [
           // Planner Metadata Inputs
           _buildPlannerField('Planner', _plannerController, width: 110),
-          _buildPlannerField('Technician', _technicianController, width: 110),
-          _buildPlannerField('Technician Contact', _technicianContactController, width: 110),
+          _buildPlannerField('Tech Name', _technicianController, width: 110),
+          _buildPlannerField('Tech Phone', _technicianContactController, width: 110),
           _buildPlannerField('Notice #', _noticeController, width: 100),
           _buildPlannerField('Time Granted', _timeGrantedController, width: 90),
           _buildPlannerField('Time Returned', _timeReturnedController, width: 90),
@@ -307,7 +307,7 @@ class _YardMapScreenState extends State<YardMapScreen> {
               style: const TextStyle(fontSize: 12, color: Colors.white),
               textCapitalization: TextCapitalization.characters,
               decoration: InputDecoration(
-                hintText: 'Search...',
+                hintText: 'Switch Search...',
                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 11),
                 prefixIcon: const Icon(Icons.search, size: 14, color: Colors.grey),
                 suffixIcon: _searchQuery.isNotEmpty

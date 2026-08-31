@@ -37,6 +37,7 @@ class _YardMapScreenState extends State<YardMapScreen> {
   // --- PLANNER / OCCUPATION FIELD CONTROLLERS ---
   final TextEditingController _plannerController = TextEditingController();
   final TextEditingController _technicianController = TextEditingController();
+  final TextEditingController _technicianContactController = TextEditingController();
   final TextEditingController _noticeController = TextEditingController();
   final TextEditingController _timeGrantedController = TextEditingController();
   final TextEditingController _timeReturnedController = TextEditingController();
@@ -111,6 +112,7 @@ class _YardMapScreenState extends State<YardMapScreen> {
                   children: [
                     pw.Text('Planner: ${_plannerController.text.isEmpty ? '________' : _plannerController.text}', style: const pw.TextStyle(fontSize: 10)),
                     pw.Text('Technician: ${_technicianController.text.isEmpty ? '________' : _technicianController.text}', style: const pw.TextStyle(fontSize: 10)),
+                    pw.Text('Technician: ${_technicianContactController.text.isEmpty ? '________' : _technicianContactController.text}', style: const pw.TextStyle(fontSize: 10)),
                     pw.Text('Time Granted: ${_timeGrantedController.text.isEmpty ? '________' : _timeGrantedController.text}', style: const pw.TextStyle(fontSize: 10)),
                     pw.Text('Time Returned: ${_timeReturnedController.text.isEmpty ? '________' : _timeReturnedController.text}', style: const pw.TextStyle(fontSize: 10)),
                   ],
@@ -290,7 +292,8 @@ class _YardMapScreenState extends State<YardMapScreen> {
           // Planner Metadata Inputs
           _buildPlannerField('Planner', _plannerController, width: 110),
           _buildPlannerField('Technician', _technicianController, width: 110),
-          _buildPlannerField('Occ / Notice #', _noticeController, width: 100),
+          _buildPlannerField('Technician Contact', _technicianContactController, width: 110),
+          _buildPlannerField('Notice #', _noticeController, width: 100),
           _buildPlannerField('Time Granted', _timeGrantedController, width: 90),
           _buildPlannerField('Time Returned', _timeReturnedController, width: 90),
 

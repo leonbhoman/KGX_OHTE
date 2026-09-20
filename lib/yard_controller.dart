@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 
+/// Defines switch metadata for UI tracking
 class SwitchDefinition {
   final String name;
   final String trackGroupId;
@@ -11,6 +12,15 @@ class SwitchDefinition {
     required this.trackGroupId,
     this.initialClosed = true,
   });
+}
+
+/// Represents an edge in the electrical graph connecting two track sections across a switch
+class YardConnection {
+  final String sectionA;
+  final String sectionB;
+  final String switchName;
+
+  const YardConnection(this.sectionA, this.sectionB, this.switchName);
 }
 
 class YardController {
@@ -36,9 +46,6 @@ class YardController {
     'C14' : ['H25'],
     'C20' : ['H9', 'H10', 'H11'], 
     'C21' : ['H14'], 
-
-    
-    // Add additional switch-to-insulator mappings here as needed
   };
 
   final List<SwitchDefinition> switchDefinitions = [
@@ -60,6 +67,26 @@ class YardController {
     const SwitchDefinition(name: 'C12', trackGroupId: 'LandsideOutFeed'),
     const SwitchDefinition(name: 'C10', trackGroupId: 'SeasideOutFeed'),
     const SwitchDefinition(name: 'C35', trackGroupId: 'C35_Isolator', initialClosed: false),
+  ];
+
+  /// Topological graph connections representing switch bridges between track sections
+  final List<YardConnection> yardTopology = const [
+    YardConnection('SeasideInFeeder1',  'SeasideInFeeder2',  'C24'),
+    YardConnection('SeasideInFeeder2',  'C16R46to52',        'C16'),
+    YardConnection('C16R46to52',        'C32R53to59',        'C32'),
+    YardConnection('SeasideInFeeder2',  'C17R40to45',        'C17'),
+    YardConnection('C17R40to45',        'SeasideOutFeed',    'C10'),
+    YardConnection('SeasideOutFeed',    'LandsideOutFeed',   'C35'),
+    YardConnection('LandsideInFeeder1', 'LandsideInFeeder2',  'C25'),
+    YardConnection('LandsideInFeeder2', 'C18R32to39',        'C18'),
+    YardConnection('LandsideInFeeder2', 'C19R24to31',        'C19'),
+    YardConnection('C19R24to31',        'LandsideOutFeed',   'C12'),
+    YardConnection('LandsideInFeeder2', 'C20R16to23',        'C20'),
+    YardConnection('C20R16to23',        'LandsideOutFeed',   'C13'),
+    YardConnection('LandsideInFeeder2', 'C21R8to15',         'C21'),
+    YardConnection('C21R8to15',        'LandsideOutFeed',   'C14'),
+    YardConnection('LandsideInFeeder2', 'C22R1to7',          'C22'),
+    YardConnection('C22R1to7',          'LandsideOutFeed',   'C15'),
   ];
 
   Future<void> initializeYardData() async {
@@ -85,58 +112,46 @@ class YardController {
     }
   }
 
-  Map<String, bool> _evaluateTrackStates() {
-    bool isClosed(String name) => switchStates[name] ?? true;
-
-    final bool rawSeasideFeeder = true;
-    final bool forwardC24 = rawSeasideFeeder && isClosed('C24');
-    final bool forwardC16 = forwardC24 && isClosed('C16');
-    final bool forwardC32 = forwardC16 && isClosed('C32');
-
-    bool landsideInboundBusHasPower = isClosed('C25');
-    bool landsideOutfeedHasPower = isClosed('C25') && 
-        (isClosed('C12') || isClosed('C13') || isClosed('C14') || isClosed('C15') || isClosed('C18'));
-
-    final bool seasideForwardSupply = forwardC24 && isClosed('C17') && isClosed('C10');
-    bool seasideOutfeedHasPower = seasideForwardSupply || (isClosed('C35') && landsideOutfeedHasPower);
-
-    if (isClosed('C35') && seasideOutfeedHasPower) {
-      landsideOutfeedHasPower = true;
+  /// Evaluates track energization states using Breadth-First Search (BFS) graph traversal
+  Map<String, bool> _evaluateTrackStates({
+    List<String> activeSources = const ['SeasideInFeeder1', 'LandsideInFeeder1'],
+  }) {
+    final Map<String, bool> trackStates = {};
+    
+    // 1. Build Adjacency Map from Topology
+    final Map<String, List<YardConnection>> adjacencyMap = {};
+    for (var conn in yardTopology) {
+      adjacencyMap.putIfAbsent(conn.sectionA, () => []).add(conn);
+      adjacencyMap.putIfAbsent(conn.sectionB, () => []).add(conn);
     }
 
-    if (!landsideInboundBusHasPower && landsideOutfeedHasPower) {
-      if ((isClosed('C12') && isClosed('C19')) ||
-          (isClosed('C13') && isClosed('C20')) ||
-          (isClosed('C14') && isClosed('C21')) ||
-          (isClosed('C15') && isClosed('C22')) ||
-          isClosed('C18')) {
-        landsideInboundBusHasPower = true;
+    // 2. Initialize Queue with Active Infeed Substation Sources
+    final List<String> queue = List.from(activeSources);
+    for (String source in activeSources) {
+      trackStates[source] = true;
+    }
+
+    // 3. BFS Graph Traversal
+    while (queue.isNotEmpty) {
+      final String currentSection = queue.removeAt(0);
+
+      final connections = adjacencyMap[currentSection] ?? [];
+      for (var conn in connections) {
+        final String neighbor = (conn.sectionA == currentSection) ? conn.sectionB : conn.sectionA;
+        final bool isSwitchClosed = switchStates[conn.switchName] ?? true;
+
+        // If the connecting switch is closed and the adjacent track isn't energized yet
+        if (isSwitchClosed && !(trackStates[neighbor] ?? false)) {
+          trackStates[neighbor] = true;
+          queue.add(neighbor); // Enqueue neighbor to explore further outward
+        }
       }
     }
 
-    if (landsideInboundBusHasPower) {
-      if (isClosed('C12') || isClosed('C13') || isClosed('C14') || isClosed('C15') || isClosed('C18')) {
-        landsideOutfeedHasPower = true;
-      }
-    }
+    // 4. Set Isolator switch state indicator
+    trackStates['C35_Isolator'] = switchStates['C35'] ?? false;
 
-    return {
-      'C16R46to52': forwardC16,
-      'C32R53to59': forwardC32,
-      'SeasideOutFeed': seasideOutfeedHasPower,
-      'C17R40to45': (forwardC24 && isClosed('C17')) || (seasideOutfeedHasPower && isClosed('C10')),
-      'LandsideOutFeed': landsideOutfeedHasPower,
-      'LandsideInFeeder2': isClosed('C25') || landsideInboundBusHasPower,
-      'C18R32to39': landsideInboundBusHasPower && isClosed('C18'),
-      'C19R24to31': (landsideInboundBusHasPower && isClosed('C19')) || (landsideOutfeedHasPower && isClosed('C12')),
-      'C20R16to23': (landsideInboundBusHasPower && isClosed('C20')) || (landsideOutfeedHasPower && isClosed('C13')),
-      'C21R8to15':  (landsideInboundBusHasPower && isClosed('C21')) || (landsideOutfeedHasPower && isClosed('C14')),
-      'C22R1to7':   (landsideInboundBusHasPower && isClosed('C22')) || (landsideOutfeedHasPower && isClosed('C15')),
-      'SeasideInFeeder1': true, 
-      'LandsideInFeeder1': true,
-      'SeasideInFeeder2': forwardC24,
-      'C35_Isolator': isClosed('C35'),
-    };
+    return trackStates;
   }
 
   String buildDynamicSvgCode() {

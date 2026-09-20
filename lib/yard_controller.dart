@@ -116,22 +116,38 @@ class YardController {
   Map<String, bool> _evaluateTrackStates({
     List<String> activeSources = const ['SeasideInFeeder1', 'LandsideInFeeder1'],
   }) {
-    final Map<String, bool> trackStates = {};
-    
-    // 1. Build Adjacency Map from Topology
+    // 1. Initialize ALL track sections as unenergized (false)
+    final Map<String, bool> trackStates = {
+      'SeasideInFeeder1': false,
+      'SeasideInFeeder2': false,
+      'C16R46to52': false,
+      'C32R53to59': false,
+      'C17R40to45': false,
+      'SeasideOutFeed': false,
+      'LandsideInFeeder1': false,
+      'LandsideInFeeder2': false,
+      'C18R32to39': false,
+      'C19R24to31': false,
+      'C20R16to23': false,
+      'C21R8to15': false,
+      'C22R1to7': false,
+      'LandsideOutFeed': false,
+    };
+
+    // 2. Build Adjacency Map from Topology
     final Map<String, List<YardConnection>> adjacencyMap = {};
     for (var conn in yardTopology) {
       adjacencyMap.putIfAbsent(conn.sectionA, () => []).add(conn);
       adjacencyMap.putIfAbsent(conn.sectionB, () => []).add(conn);
     }
 
-    // 2. Initialize Queue with Active Infeed Substation Sources
+    // 3. Queue active sources and set them to true
     final List<String> queue = List.from(activeSources);
     for (String source in activeSources) {
       trackStates[source] = true;
     }
 
-    // 3. BFS Graph Traversal
+    // 4. BFS Graph Traversal
     while (queue.isNotEmpty) {
       final String currentSection = queue.removeAt(0);
 
@@ -148,7 +164,7 @@ class YardController {
       }
     }
 
-    // 4. Set Isolator switch state indicator
+    // 5. Set Isolator switch state indicator
     trackStates['C35_Isolator'] = switchStates['C35'] ?? false;
 
     return trackStates;

@@ -124,7 +124,7 @@ class YardController {
       'C16R46to52': forwardC16,
       'C32R53to59': forwardC32,
       'SeasideOutFeed': seasideOutfeedHasPower,
-      'C17R40to45': (forwardC24 && isClosed('C17')) || (seasideOutfeedHasPower && isClosed('C10') && isClosed('C17')),
+      'C17R40to45': (forwardC24 && isClosed('C17')) || (seasideOutfeedHasPower && isClosed('C10')),
       'LandsideOutFeed': landsideOutfeedHasPower,
       'LandsideInFeeder2': isClosed('C25') || landsideInboundBusHasPower,
       'C18R32to39': landsideInboundBusHasPower && isClosed('C18'),
